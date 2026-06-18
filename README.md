@@ -2,23 +2,41 @@ This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next
 
 ## Getting Started
 
-First, run the development server:
+The app runs locally, while its data services (Postgres + Redis) run in Docker.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. **Set up environment variables.** Copy the example file and fill in secrets
+   (or use the values already generated in `.env`):
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+   ```bash
+   cp .env.example .env
+   # generate secrets:
+   #   POSTGRES_PASSWORD -> openssl rand -hex 24   (also update it inside DATABASE_URL)
+   #   JWT_SECRET        -> openssl rand -base64 48
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+2. **Start the data services** (Postgres + Redis, with persistent volumes):
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+   ```bash
+   docker compose up -d
+   ```
+
+3. **Install dependencies and apply the database schema:**
+
+   ```bash
+   npm install
+   npx prisma migrate deploy   # or `prisma migrate dev` while iterating on the schema
+   ```
+
+4. **Run the dev server:**
+
+   ```bash
+   npm run dev
+   ```
+
+Open [http://localhost:3000/sign-in](http://localhost:3000/sign-in) in your browser.
+
+Stop the data services with `docker compose down` (add `-v` to also wipe the
+Postgres/Redis volumes).
 
 ## Learn More
 

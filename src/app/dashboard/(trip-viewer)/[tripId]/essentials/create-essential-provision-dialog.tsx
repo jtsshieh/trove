@@ -1,7 +1,8 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Essential, EssentialCategory, Trip } from '@prisma/client';
+import type { Essential, Trip } from '@/generated/prisma/client';
+import { EssentialCategory } from '@/generated/prisma/enums';
 import { ChevronsUpDown, Plus } from 'lucide-react';
 import React, { useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
@@ -89,11 +90,13 @@ export function CreateEssentialProvisionDialog({
 				}
 			}}
 		>
-			<DialogTrigger asChild>
-				<Button size="icon" className="gap-1 md:w-auto md:px-4 md:py-2">
-					<Plus />
-					<span className="hidden md:block">Add Provision</span>
-				</Button>
+			<DialogTrigger
+				render={
+					<Button size="icon" className="gap-1 md:w-auto md:px-4 md:py-2" />
+				}
+			>
+				<Plus />
+				<span className="hidden md:block">Add Provision</span>
 			</DialogTrigger>
 			<DialogContent>
 				<Form {...form}>
@@ -108,29 +111,27 @@ export function CreateEssentialProvisionDialog({
 								<FormItem className="flex flex-col">
 									<FormLabel>Essential</FormLabel>
 									<Popover open={comboOpen} onOpenChange={setComboOpen}>
-										<PopoverTrigger asChild>
-											<FormControl>
-												<Button
-													disabled={isPending}
-													variant="outline"
-													role="combobox"
-													className={cn(
-														'flex justify-between',
-														!field.value && 'text-neutral-600',
-													)}
-												>
-													{field.value
-														? (
-																Object.values(groups)
-																	.flatMap((category) => category)
-																	.find(
-																		(essential) => essential.id === field.value,
-																	) as Essential
-															).name
-														: "Select the essential you'd like to add"}
-													<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-												</Button>
-											</FormControl>
+										<PopoverTrigger render={<FormControl />}>
+											<Button
+												disabled={isPending}
+												variant="outline"
+												role="combobox"
+												className={cn(
+													'flex justify-between',
+													!field.value && 'text-neutral-600',
+												)}
+											>
+												{field.value
+													? (
+															Object.values(groups)
+																.flatMap((category) => category)
+																.find(
+																	(essential) => essential.id === field.value,
+																) as Essential
+														).name
+													: "Select the essential you'd like to add"}
+												<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+											</Button>
 										</PopoverTrigger>
 										<PopoverContent
 											className="w-[--radix-popover-trigger-width] p-0"

@@ -1,4 +1,4 @@
-import { ContainerType } from '@prisma/client';
+import { ContainerType } from '@/generated/prisma/enums';
 import { z } from 'zod';
 
 export const createContainerSchema = z.object({

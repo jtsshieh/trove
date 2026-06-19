@@ -6,11 +6,16 @@ import { z } from 'zod';
 
 import { authenticatedActionClient } from '../../../../../../lib/action-client';
 import { prisma } from '../../../../../../lib/db.server';
+import { getAllLuggage } from './fetchers';
 import { createLuggageSchema, editLuggageSchema } from './schemas';
+
+export async function fetchAllLuggage() {
+	return getAllLuggage();
+}
 
 export const createLuggage = authenticatedActionClient
 	.metadata({ actionName: 'createLuggage' })
-	.schema(createLuggageSchema)
+	.inputSchema(createLuggageSchema)
 	.action(async ({ parsedInput: { name }, ctx: { user } }) => {
 		const lastLuggage = await prisma.luggage.findFirst({
 			where: { userId: user.id },
@@ -52,7 +57,7 @@ const luggageClient = authenticatedActionClient.use(
 );
 export const editLuggage = luggageClient
 	.metadata({ actionName: 'editLuggage' })
-	.schema(editLuggageSchema)
+	.inputSchema(editLuggageSchema)
 	.bindArgsSchemas<[luggageId: z.ZodString]>([z.string()])
 	.action(async ({ parsedInput: { name, order }, ctx: { luggage } }) => {
 		await prisma.luggage.update({

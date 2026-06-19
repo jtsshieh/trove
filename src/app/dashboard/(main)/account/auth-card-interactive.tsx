@@ -47,14 +47,14 @@ import {
 	FormMessage,
 } from '../../../../components/ui/form';
 import { Input } from '../../../../components/ui/input';
-import { useToast } from '../../../../components/ui/use-toast';
+import { toast } from 'sonner';
+
 import { editEssentialSchema } from '../essentials/_data/schemas';
 import { PasskeyDTO } from './_data/fetchers';
 
 export function AuthCardInteractive({ passkeys }: { passkeys: PasskeyDTO[] }) {
 	const [isPending, startTransition] = useTransition();
 	const [error, setError] = useState('');
-	const { toast } = useToast();
 	const createPasskey = () =>
 		startTransition(async () => {
 			const registrationOptions = await getRegistrationOptions();
@@ -95,7 +95,7 @@ export function AuthCardInteractive({ passkeys }: { passkeys: PasskeyDTO[] }) {
 				}
 				setTimeout(() => setError(''), 10000);
 			} else {
-				toast({ description: 'Passkey added successfully' });
+				toast.success('Passkey added successfully');
 				setError('');
 			}
 		});
@@ -206,10 +206,8 @@ function EditPasskeyDialog({ passkey }: { passkey: PasskeyDTO }) {
 				}
 			}}
 		>
-			<DialogTrigger asChild>
-				<Button size="icon" variant="secondary">
-					<Pencil />
-				</Button>
+			<DialogTrigger render={<Button size="icon" variant="secondary" />}>
+				<Pencil />
 			</DialogTrigger>{' '}
 			<DialogContent>
 				<Form {...form}>
@@ -257,37 +255,33 @@ function DeletePasskeyDialog({ passkey }: { passkey: PasskeyDTO }) {
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				<Button variant="destructive" size="icon">
-					<Trash />
-				</Button>
+			<DialogTrigger render={<Button variant="destructive" size="icon" />}>
+				<Trash />
 			</DialogTrigger>
-			<DialogContent asChild>
-				<form onSubmit={onSubmit}>
-					<DialogHeader>
-						<DialogTitle>Delete passkey</DialogTitle>
-						<DialogDescription>
-							Are you sure you want to delete the passkey {passkey.name}? You
-							will no longer be able to login with this passkey anymore. This
-							action is irreversible
-						</DialogDescription>
-					</DialogHeader>
-					<DialogFooter>
-						<Button
-							onClick={(e) => {
-								e.preventDefault();
-								setOpen(false);
-							}}
-							variant="secondary"
-							disabled={isPending}
-						>
-							Cancel
-						</Button>
-						<Button type="submit" loading={isPending}>
-							Delete
-						</Button>
-					</DialogFooter>
-				</form>
+			<DialogContent render={<form onSubmit={onSubmit} />}>
+				<DialogHeader>
+					<DialogTitle>Delete passkey</DialogTitle>
+					<DialogDescription>
+						Are you sure you want to delete the passkey {passkey.name}? You will
+						no longer be able to login with this passkey anymore. This action is
+						irreversible
+					</DialogDescription>
+				</DialogHeader>
+				<DialogFooter>
+					<Button
+						onClick={(e) => {
+							e.preventDefault();
+							setOpen(false);
+						}}
+						variant="secondary"
+						disabled={isPending}
+					>
+						Cancel
+					</Button>
+					<Button type="submit" loading={isPending}>
+						Delete
+					</Button>
+				</DialogFooter>
 			</DialogContent>
 		</Dialog>
 	);

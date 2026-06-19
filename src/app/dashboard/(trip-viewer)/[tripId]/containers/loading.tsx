@@ -2,28 +2,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Loading() {
 	return (
-		<div className="flex flex-col">
-			<div className="mb-4 flex items-center gap-4">
-				<Skeleton className="h-[40px] w-[40px]" />
-				<div className="flex flex-1 flex-col gap-1">
-					<Skeleton className="h-[32px] w-[250px]" />
-					<Skeleton className="w-full select-none text-transparent">
-						Choose the containers you'll be bringing on this trip and organize
-						all of the items you've provisioned into these containers.
-					</Skeleton>
+		<>
+			<div className="sticky -top-6 mb-4 flex items-center gap-4 rounded-xl bg-neutral-200/75 p-2 backdrop-blur">
+				<Skeleton className="size-10 rounded-lg" />
+				<div className="flex-1 space-y-2">
+					<Skeleton className="h-6 w-48" />
+					<Skeleton className="h-4 w-72 max-w-full" />
 				</div>
-				<Skeleton className="h-[40px] w-[40px] md:w-[150px]" />
+				<Skeleton className="h-9 w-28" />
 			</div>
-			<div className="mb-4">
-				<Skeleton className="h-[16px] w-full" />
-				<Skeleton className="mt-2 h-[16px] w-full" />
+			<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+				{Array.from({ length: 4 }).map((_, i) => (
+					<Skeleton key={i} className="h-40 w-full rounded-xl" />
+				))}
 			</div>
-			<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-				<Skeleton className="h-[300px] w-full rounded-xl" />
-				<Skeleton className="h-[300px] w-full rounded-xl" />
-				<Skeleton className="h-[300px] w-full rounded-xl" />
-				<Skeleton className="h-[300px] w-full rounded-xl" />
-			</div>
-		</div>
+		</>
 	);
 }

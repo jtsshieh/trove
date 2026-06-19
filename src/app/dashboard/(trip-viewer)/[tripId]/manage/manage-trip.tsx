@@ -1,6 +1,6 @@
 'use client';
 
-import { Trip } from '@prisma/client';
+import type { Trip } from '@/generated/prisma/client';
 
 import {
 	BaseCreateEditTripForm,
@@ -14,10 +14,9 @@ import {
 	CardHeader,
 	CardTitle,
 } from '../../../../../components/ui/card';
-import { useToast } from '../../../../../components/ui/use-toast';
+import { toast } from 'sonner';
 
 export function ManageTrip({ trip }: { trip: Trip }) {
-	const { toast } = useToast();
 	return (
 		<div className="flex flex-col gap-4">
 			<Card>
@@ -31,12 +30,7 @@ export function ManageTrip({ trip }: { trip: Trip }) {
 				<BaseCreateEditTripForm
 					type="edit"
 					trip={trip}
-					onSubmit={() =>
-						toast({
-							variant: 'success',
-							description: 'Edited the trip successfully',
-						})
-					}
+					onSubmit={() => toast.success('Edited the trip successfully')}
 					ContentWrapper={CardContent}
 					SubmitWrapper={({ children }) => (
 						<CardFooter className="mt-4 justify-end bg-neutral-100 py-4">

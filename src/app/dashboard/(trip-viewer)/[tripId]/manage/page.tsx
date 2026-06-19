@@ -5,16 +5,14 @@ import React from 'react';
 import { getTrip } from '../_data/fetchers';
 import { ManageTrip } from './manage-trip';
 
-export default async function ManageTripPage(
-    props: {
-        params: Promise<{ tripId: string }>;
-    }
-) {
-    const params = await props.params;
-    const trip = await getTrip(params.tripId);
-    if (!trip) return notFound();
+export default async function ManageTripPage(props: {
+	params: Promise<{ tripId: string }>;
+}) {
+	const params = await props.params;
+	const trip = await getTrip(params.tripId);
+	if (!trip) return notFound();
 
-    return (
+	return (
 		<>
 			<div className="mb-4 flex items-center gap-4">
 				<Settings className="h-10 w-10" />

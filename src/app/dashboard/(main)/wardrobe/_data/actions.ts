@@ -6,11 +6,21 @@ import { z } from 'zod';
 import { authenticatedActionClient } from '@/lib/action-client';
 import { prisma } from '@/lib/db.server';
 
+import { getAllBrands } from '../brands/_data/fetchers';
+import { getAllClothingTypesWithClothes } from './fetchers';
 import { createClothingSchema, editClothingSchema } from './schemas';
+
+export async function fetchAllBrands() {
+	return getAllBrands();
+}
+
+export async function fetchClothingTypesWithClothes() {
+	return getAllClothingTypesWithClothes();
+}
 
 export const createClothing = authenticatedActionClient
 	.metadata({ actionName: 'createClothing' })
-	.schema(createClothingSchema)
+	.inputSchema(createClothingSchema)
 	.action(
 		async ({
 			parsedInput: { brandLine, color, number, modifier, type, brand },
@@ -62,7 +72,7 @@ const clothingClient = authenticatedActionClient.use(
 
 export const editClothing = clothingClient
 	.metadata({ actionName: 'editClothing' })
-	.schema(editClothingSchema)
+	.inputSchema(editClothingSchema)
 	.bindArgsSchemas<[clothingId: z.ZodString]>([z.string()])
 	.action(
 		async ({

@@ -1,6 +1,7 @@
 'use client';
 
-import { Essential, EssentialCategory } from '@prisma/client';
+import type { Essential } from '@/generated/prisma/client';
+import { EssentialCategory } from '@/generated/prisma/enums';
 
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 

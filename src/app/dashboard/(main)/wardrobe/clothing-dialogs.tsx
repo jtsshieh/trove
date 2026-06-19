@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Brand, Clothing, ClothingType } from '@prisma/client';
+import type { Brand, Clothing, ClothingType } from '@/generated/prisma/client';
 import { Plus, Trash } from 'lucide-react';
 import React, { FormEvent, useEffect, useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
@@ -73,11 +73,13 @@ export function CreateClothingDialog({
 				}
 			}}
 		>
-			<DialogTrigger asChild>
-				<Button size="icon" className="gap-1 sm:w-auto sm:px-4 sm:py-2">
-					<Plus />
-					<span className="hidden sm:block">Add Clothing</span>
-				</Button>
+			<DialogTrigger
+				render={
+					<Button size="icon" className="gap-1 sm:w-auto sm:px-4 sm:py-2" />
+				}
+			>
+				<Plus />
+				<span className="hidden sm:block">Add Clothing</span>
 			</DialogTrigger>
 			<DialogContent className="max-h-[90vh] overflow-y-scroll">
 				<Form {...form}>
@@ -290,8 +292,8 @@ export function EditClothingDialog({
 				}
 			}}
 		>
-			<DialogTrigger asChild>
-				<Button variant="secondary">Edit</Button>
+			<DialogTrigger render={<Button variant="secondary" />}>
+				Edit
 			</DialogTrigger>
 			<DialogContent className="max-h-[90vh] overflow-y-scroll">
 				<Form {...form}>
@@ -453,36 +455,32 @@ export function DeleteClothingDialog({ clothing }: { clothing: Clothing }) {
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				<Button size="icon" variant="destructive">
-					<Trash />
-				</Button>
+			<DialogTrigger render={<Button size="icon" variant="destructive" />}>
+				<Trash />
 			</DialogTrigger>
-			<DialogContent asChild>
-				<form onSubmit={onSubmit}>
-					<DialogHeader>
-						<DialogTitle>Delete clothing</DialogTitle>
-						<DialogDescription>
-							Are you sure you want to delete {generateClothingName(clothing)}?
-							This action is irreversible.
-						</DialogDescription>
-					</DialogHeader>
-					<DialogFooter>
-						<Button
-							onClick={(e) => {
-								e.preventDefault();
-								setOpen(false);
-							}}
-							variant="secondary"
-							disabled={isPending}
-						>
-							Cancel
-						</Button>
-						<Button type="submit" loading={isPending}>
-							Delete
-						</Button>
-					</DialogFooter>
-				</form>
+			<DialogContent render={<form onSubmit={onSubmit} />}>
+				<DialogHeader>
+					<DialogTitle>Delete clothing</DialogTitle>
+					<DialogDescription>
+						Are you sure you want to delete {generateClothingName(clothing)}?
+						This action is irreversible.
+					</DialogDescription>
+				</DialogHeader>
+				<DialogFooter>
+					<Button
+						onClick={(e) => {
+							e.preventDefault();
+							setOpen(false);
+						}}
+						variant="secondary"
+						disabled={isPending}
+					>
+						Cancel
+					</Button>
+					<Button type="submit" loading={isPending}>
+						Delete
+					</Button>
+				</DialogFooter>
 			</DialogContent>
 		</Dialog>
 	);

@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Trip } from '@prisma/client';
+import type { Trip } from '@/generated/prisma/client';
 import { format } from 'date-fns';
 import { CalendarIcon, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -135,28 +135,26 @@ export function BaseCreateEditTripForm(
 								<FormItem className="flex flex-col">
 									<FormLabel>Dates</FormLabel>
 									<Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-										<PopoverTrigger asChild>
-											<FormControl>
-												<Button
-													disabled={isPending}
-													variant="outline"
-													className={cn('pl-3 text-left font-normal')}
-												>
-													{field.value?.from ? (
-														field.value?.to ? (
-															<>
-																{format(field.value.from, 'LLL dd, y')} -{' '}
-																{format(field.value.to, 'LLL dd, y')}
-															</>
-														) : (
-															format(field.value.from, 'LLL dd, y')
-														)
+										<PopoverTrigger render={<FormControl />}>
+											<Button
+												disabled={isPending}
+												variant="outline"
+												className={cn('pl-3 text-left font-normal')}
+											>
+												{field.value?.from ? (
+													field.value?.to ? (
+														<>
+															{format(field.value.from, 'LLL dd, y')} -{' '}
+															{format(field.value.to, 'LLL dd, y')}
+														</>
 													) : (
-														<span>Select the dates of your trip</span>
-													)}
-													<CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-												</Button>
-											</FormControl>
+														format(field.value.from, 'LLL dd, y')
+													)
+												) : (
+													<span>Select the dates of your trip</span>
+												)}
+												<CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+											</Button>
 										</PopoverTrigger>
 										<PopoverContent className="w-auto p-0" align="start">
 											<Calendar
@@ -168,7 +166,6 @@ export function BaseCreateEditTripForm(
 													field.onChange(e);
 													if (e?.to && e?.from) setCalendarOpen(false);
 												}}
-												initialFocus
 											/>
 										</PopoverContent>
 									</Popover>
@@ -191,11 +188,13 @@ export function BaseCreateEditTripForm(
 export function CreateTripDialog() {
 	return (
 		<Dialog>
-			<DialogTrigger asChild>
-				<Button size="icon" className="gap-1 sm:w-auto sm:px-4 sm:py-2">
-					<Plus />
-					<span className="hidden sm:block">Create Trip</span>
-				</Button>
+			<DialogTrigger
+				render={
+					<Button size="icon" className="gap-1 sm:w-auto sm:px-4 sm:py-2" />
+				}
+			>
+				<Plus />
+				<span className="hidden sm:block">Create Trip</span>
 			</DialogTrigger>
 			<DialogContent>
 				<DialogHeader>
@@ -226,8 +225,8 @@ export function DeleteTripDialog({ trip }: { trip: Trip }) {
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				<Button variant="destructive">Delete Trip</Button>
+			<DialogTrigger render={<Button variant="destructive" />}>
+				Delete Trip
 			</DialogTrigger>
 			<DialogContent>
 				<DialogHeader>

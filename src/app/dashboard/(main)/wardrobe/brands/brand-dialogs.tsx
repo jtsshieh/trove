@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Brand } from '@prisma/client';
+import type { Brand } from '@/generated/prisma/client';
 import { Plus, Trash } from 'lucide-react';
 import React, { FormEvent, useEffect, useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
@@ -45,10 +45,8 @@ export function CreateBrandDialog() {
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				<Button size="icon">
-					<Plus />
-				</Button>
+			<DialogTrigger render={<Button size="icon" />}>
+				<Plus />
 			</DialogTrigger>
 			<DialogContent>
 				<Form {...form}>
@@ -120,9 +118,7 @@ export function EditBrandDialog({ brand }: { brand: Brand }) {
 				}
 			}}
 		>
-			<DialogTrigger asChild>
-				<Button>Edit</Button>
-			</DialogTrigger>
+			<DialogTrigger render={<Button />}>Edit</DialogTrigger>
 			<DialogContent>
 				<Form {...form}>
 					<form onSubmit={onSubmit} className="space-y-8">
@@ -168,36 +164,32 @@ export function DeleteBrandDialog({ brand }: { brand: Brand }) {
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				<Button size="icon" variant="destructive">
-					<Trash />
-				</Button>
+			<DialogTrigger render={<Button size="icon" variant="destructive" />}>
+				<Trash />
 			</DialogTrigger>
-			<DialogContent asChild>
-				<form onSubmit={onSubmit}>
-					<DialogHeader>
-						<DialogTitle>Delete brand</DialogTitle>
-						<DialogDescription>
-							Are you sure you want to delete {brand.name}? This action is
-							irreversible.
-						</DialogDescription>
-					</DialogHeader>
-					<DialogFooter>
-						<Button
-							onClick={(e) => {
-								e.preventDefault();
-								setOpen(false);
-							}}
-							variant="secondary"
-							disabled={isPending}
-						>
-							Cancel
-						</Button>
-						<Button type="submit" loading={isPending}>
-							Delete
-						</Button>
-					</DialogFooter>
-				</form>
+			<DialogContent render={<form onSubmit={onSubmit} />}>
+				<DialogHeader>
+					<DialogTitle>Delete brand</DialogTitle>
+					<DialogDescription>
+						Are you sure you want to delete {brand.name}? This action is
+						irreversible.
+					</DialogDescription>
+				</DialogHeader>
+				<DialogFooter>
+					<Button
+						onClick={(e) => {
+							e.preventDefault();
+							setOpen(false);
+						}}
+						variant="secondary"
+						disabled={isPending}
+					>
+						Cancel
+					</Button>
+					<Button type="submit" loading={isPending}>
+						Delete
+					</Button>
+				</DialogFooter>
 			</DialogContent>
 		</Dialog>
 	);

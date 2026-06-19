@@ -1,7 +1,8 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Container, ContainerType } from '@prisma/client';
+import type { Container } from '@/generated/prisma/client';
+import { ContainerType } from '@/generated/prisma/enums';
 import { Pencil, Plus, Trash } from 'lucide-react';
 import React, { FormEvent, useEffect, useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
@@ -70,11 +71,13 @@ export function CreateContainerDialog() {
 				}
 			}}
 		>
-			<DialogTrigger asChild>
-				<Button size="icon" className="gap-1 sm:w-auto sm:px-4 sm:py-2">
-					<Plus />
-					<span className="hidden sm:block">Add Container</span>
-				</Button>
+			<DialogTrigger
+				render={
+					<Button size="icon" className="gap-1 sm:w-auto sm:px-4 sm:py-2" />
+				}
+			>
+				<Plus />
+				<span className="hidden sm:block">Add Container</span>
 			</DialogTrigger>
 			<DialogContent>
 				<Form {...form}>
@@ -187,10 +190,10 @@ export function EditContainerDialog({
 				}
 			}}
 		>
-			<DialogTrigger asChild>
-				<Button size="icon" variant="secondary" disabled={disabled}>
-					<Pencil />
-				</Button>
+			<DialogTrigger
+				render={<Button size="icon" variant="secondary" disabled={disabled} />}
+			>
+				<Pencil />
 			</DialogTrigger>
 			<DialogContent>
 				<Form {...form}>
@@ -275,36 +278,36 @@ export function DeleteContainerDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				<Button size="icon" variant="destructive" disabled={disabled}>
-					<Trash />
-				</Button>
+			<DialogTrigger
+				render={
+					<Button size="icon" variant="destructive" disabled={disabled} />
+				}
+			>
+				<Trash />
 			</DialogTrigger>
-			<DialogContent asChild>
-				<form onSubmit={onSubmit}>
-					<DialogHeader>
-						<DialogTitle>Delete Container</DialogTitle>
-						<DialogDescription>
-							Are you sure you want to delete {container.name}? This action is
-							irreversible.
-						</DialogDescription>
-					</DialogHeader>
-					<DialogFooter>
-						<Button
-							onClick={(e) => {
-								e.preventDefault();
-								setOpen(false);
-							}}
-							variant="secondary"
-							disabled={isPending}
-						>
-							Cancel
-						</Button>
-						<Button type="submit" loading={isPending}>
-							Delete
-						</Button>
-					</DialogFooter>
-				</form>
+			<DialogContent render={<form onSubmit={onSubmit} />}>
+				<DialogHeader>
+					<DialogTitle>Delete Container</DialogTitle>
+					<DialogDescription>
+						Are you sure you want to delete {container.name}? This action is
+						irreversible.
+					</DialogDescription>
+				</DialogHeader>
+				<DialogFooter>
+					<Button
+						onClick={(e) => {
+							e.preventDefault();
+							setOpen(false);
+						}}
+						variant="secondary"
+						disabled={isPending}
+					>
+						Cancel
+					</Button>
+					<Button type="submit" loading={isPending}>
+						Delete
+					</Button>
+				</DialogFooter>
 			</DialogContent>
 		</Dialog>
 	);

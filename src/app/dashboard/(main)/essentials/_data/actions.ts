@@ -1,15 +1,20 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { authenticatedActionClient } from '../../../../../lib/action-client';
 import { prisma } from '../../../../../lib/db.server';
+import { getAllEssentials } from './fetchers';
 import { createEssentialSchema, editEssentialSchema } from './schemas';
+
+export async function fetchAllEssentials() {
+	return getAllEssentials();
+}
 
 export const createEssential = authenticatedActionClient
 	.metadata({ actionName: 'createEssential' })
-	.schema(createEssentialSchema)
+	.inputSchema(createEssentialSchema)
 	.action(async ({ parsedInput: { name, category }, ctx: { user } }) => {
 		await prisma.essential.create({
 			data: {
@@ -19,7 +24,7 @@ export const createEssential = authenticatedActionClient
 			},
 		});
 
-		revalidateTag(`${user.id}-essentials`);
+		revalidatePath('/dashboard/essentials');
 
 		return {
 			type: 'success',
@@ -38,46 +43,44 @@ const essentialClient = authenticatedActionClient.use(
 		});
 		if (essential?.userId !== user.id) throw new Error('Unauthorized');
 
-		return next({ ctx: { essential, user } });
+		return next({ ctx: { essential } });
 	},
 );
 
 export const editEssential = essentialClient
 	.metadata({ actionName: 'editEssential' })
-	.schema(editEssentialSchema)
+	.inputSchema(editEssentialSchema)
 	.bindArgsSchemas<[essentialId: z.ZodString]>([z.string()])
-	.action(
-		async ({ parsedInput: { name, category }, ctx: { essential, user } }) => {
-			await prisma.essential.update({
-				where: {
-					id: essential.id,
-				},
-				data: {
-					name,
-					category,
-				},
-			});
+	.action(async ({ parsedInput: { name, category }, ctx: { essential } }) => {
+		await prisma.essential.update({
+			where: {
+				id: essential.id,
+			},
+			data: {
+				name,
+				category,
+			},
+		});
 
-			revalidateTag(`${user.id}-essentials`);
+		revalidatePath('/dashboard/essentials');
 
-			return {
-				type: 'success',
-				message: 'Essential successfully edited',
-			};
-		},
-	);
+		return {
+			type: 'success',
+			message: 'Essential successfully edited',
+		};
+	});
 
 export const deleteEssential = essentialClient
 	.metadata({ actionName: 'deleteEssential' })
 	.bindArgsSchemas<[essentialId: z.ZodString]>([z.string()])
-	.action(async ({ ctx: { essential, user } }) => {
+	.action(async ({ ctx: { essential } }) => {
 		await prisma.essential.delete({
 			where: {
 				id: essential.id,
 			},
 		});
 
-		revalidateTag(`${user.id}-essentials`);
+		revalidatePath('/dashboard/essentials');
 
 		return {
 			type: 'success',

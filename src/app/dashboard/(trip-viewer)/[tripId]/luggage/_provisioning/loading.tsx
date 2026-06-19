@@ -9,7 +9,7 @@ export default function Loading() {
 				<Skeleton className="h-[40px] w-[40px]" />
 				<div className="flex flex-1 flex-col gap-1">
 					<Skeleton className="h-[32px] w-[250px]" />
-					<Skeleton className="w-full select-none text-transparent">
+					<Skeleton className="w-full text-transparent select-none">
 						Choose all the luggage you'll be bringing on this trip and organize
 						your selected containers into your selected luggage
 					</Skeleton>

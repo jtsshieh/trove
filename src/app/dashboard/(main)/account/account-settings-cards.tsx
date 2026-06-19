@@ -22,27 +22,23 @@ import {
 	DialogTrigger,
 } from '../../../../components/ui/dialog';
 import { Input } from '../../../../components/ui/input';
-import { useToast } from '../../../../components/ui/use-toast';
+import { toast } from 'sonner';
+
 import { changeUsername, deleteUser } from './_data/actions';
 import { UserDTO } from './_data/fetchers';
 
 export function UsernameCard({ user }: { user: UserDTO }) {
 	const [username, setUsername] = useState(user.username);
 	const [isPending, startTransition] = useTransition();
-	const { toast } = useToast();
 	const onSaveUsernameChange = () =>
 		startTransition(async () => {
 			const result = await changeUsername(username);
 			if (!result.success) {
-				toast({
-					variant: 'destructive',
-
-					description: 'That username is taken. Choose another one.',
-				});
+				toast.error('That username is taken. Choose another one.');
 			} else {
-				toast({
-					description: `Your username has successfully been changed to ${username}`,
-				});
+				toast.success(
+					`Your username has successfully been changed to ${username}`,
+				);
 			}
 		});
 
@@ -95,8 +91,8 @@ function DeleteAccountDialog() {
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				<Button variant="destructive">Delete account</Button>
+			<DialogTrigger render={<Button variant="destructive" />}>
+				Delete account
 			</DialogTrigger>
 			<DialogContent>
 				<DialogHeader>

@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Clothing, ClothingType, Trip } from '@prisma/client';
+import type { Clothing, ClothingType, Trip } from '@/generated/prisma/client';
 import { format } from 'date-fns';
 import { CalendarIcon, ChevronsUpDown, Plus, RefreshCcw } from 'lucide-react';
 import React, { useState, useTransition } from 'react';
@@ -97,11 +97,13 @@ export function CreateClothingProvisionDialog({
 				}
 			}}
 		>
-			<DialogTrigger asChild>
-				<Button size="icon" className="gap-1 md:w-auto md:px-4 md:py-2">
-					<Plus />
-					<span className="hidden md:block">Add Provision</span>
-				</Button>
+			<DialogTrigger
+				render={
+					<Button size="icon" className="gap-1 md:w-auto md:px-4 md:py-2" />
+				}
+			>
+				<Plus />
+				<span className="hidden md:block">Add Provision</span>
 			</DialogTrigger>
 			<DialogContent>
 				<Form {...form}>
@@ -117,24 +119,22 @@ export function CreateClothingProvisionDialog({
 								<FormItem className="flex flex-col">
 									<FormLabel>Day</FormLabel>
 									<Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-										<PopoverTrigger asChild>
-											<FormControl>
-												<Button
-													disabled={isPending}
-													variant={'outline'}
-													className={cn(
-														'pl-3 text-left font-normal',
-														!field.value && 'text-neutral-600',
-													)}
-												>
-													{field?.value ? (
-														format(field.value, 'LLL dd, y')
-													) : (
-														<span>Pick a date</span>
-													)}
-													<CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-												</Button>
-											</FormControl>
+										<PopoverTrigger render={<FormControl />}>
+											<Button
+												disabled={isPending}
+												variant={'outline'}
+												className={cn(
+													'pl-3 text-left font-normal',
+													!field.value && 'text-neutral-600',
+												)}
+											>
+												{field?.value ? (
+													format(field.value, 'LLL dd, y')
+												) : (
+													<span>Pick a date</span>
+												)}
+												<CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+											</Button>
 										</PopoverTrigger>
 										<PopoverContent className="w-auto p-0" align="start">
 											<Calendar
@@ -147,7 +147,6 @@ export function CreateClothingProvisionDialog({
 													setComboOpen(true);
 													form.setFocus('clothing');
 												}}
-												initialFocus
 												disabled={[{ before: trip.start }, { after: trip.end }]}
 											/>
 										</PopoverContent>
@@ -163,29 +162,27 @@ export function CreateClothingProvisionDialog({
 								<FormItem className="flex flex-col">
 									<FormLabel>Clothing</FormLabel>
 									<Popover open={comboOpen} onOpenChange={setComboOpen}>
-										<PopoverTrigger asChild>
-											<FormControl>
-												<Button
-													disabled={isPending}
-													variant="outline"
-													role="combobox"
-													className={cn(
-														'flex justify-between',
-														!field.value && 'text-neutral-600',
-													)}
-												>
-													{field.value
-														? generateClothingName(
-																Object.values(clothingGroups)
-																	.flatMap((group) => group)
-																	.find(
-																		(clothing) => clothing.id === field.value,
-																	) as Clothing,
-															)
-														: 'Select piece of clothing'}
-													<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-												</Button>
-											</FormControl>
+										<PopoverTrigger render={<FormControl />}>
+											<Button
+												disabled={isPending}
+												variant="outline"
+												role="combobox"
+												className={cn(
+													'flex justify-between',
+													!field.value && 'text-neutral-600',
+												)}
+											>
+												{field.value
+													? generateClothingName(
+															Object.values(clothingGroups)
+																.flatMap((group) => group)
+																.find(
+																	(clothing) => clothing.id === field.value,
+																) as Clothing,
+														)
+													: 'Select piece of clothing'}
+												<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+											</Button>
 										</PopoverTrigger>
 										<PopoverContent
 											className="w-[--radix-popover-trigger-width] p-0"

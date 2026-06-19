@@ -1,4 +1,4 @@
-import { EssentialCategory } from '@prisma/client';
+import { EssentialCategory } from '@/generated/prisma/enums';
 import { z } from 'zod';
 
 export const createEssentialSchema = z.object({

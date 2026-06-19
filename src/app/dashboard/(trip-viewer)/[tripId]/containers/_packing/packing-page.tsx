@@ -1,4 +1,4 @@
-import { ContainerType } from '@prisma/client';
+import { ContainerType } from '@/generated/prisma/enums';
 import { Box } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import React from 'react';

@@ -1,6 +1,6 @@
 'use client';
 
-import { Brand } from '@prisma/client';
+import type { Brand } from '@/generated/prisma/client';
 
 import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 

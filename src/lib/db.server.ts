@@ -1,8 +1,11 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 import Redis from 'ioredis';
 
+import { PrismaClient } from '@/generated/prisma/client';
+
 const prismaClientSingleton = () => {
-	return new PrismaClient();
+	const adapter = new PrismaPg(process.env.DATABASE_URL!);
+	return new PrismaClient({ adapter });
 };
 
 const prisma = globalThis.prismaGlobal ?? prismaClientSingleton();

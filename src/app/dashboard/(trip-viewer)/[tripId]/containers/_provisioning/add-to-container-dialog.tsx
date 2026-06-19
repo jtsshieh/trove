@@ -1,13 +1,13 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
+import type {
 	Clothing,
 	ClothingProvision,
 	ContainerProvision,
 	Essential,
 	EssentialProvision,
-} from '@prisma/client';
+} from '@/generated/prisma/client';
 import { ChevronsUpDown, Plus } from 'lucide-react';
 import React, { useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
@@ -95,10 +95,8 @@ export function AddToContainerClothingDialog({
 				}
 			}}
 		>
-			<DialogTrigger asChild>
-				<Button size="icon">
-					<Plus />
-				</Button>
+			<DialogTrigger render={<Button size="icon" />}>
+				<Plus />
 			</DialogTrigger>
 			<DialogContent>
 				<Form {...form}>
@@ -113,27 +111,25 @@ export function AddToContainerClothingDialog({
 								<FormItem className="flex flex-col">
 									<FormLabel>Clothing Provision</FormLabel>
 									<Popover open={comboOpen} onOpenChange={setComboOpen}>
-										<PopoverTrigger asChild>
-											<FormControl>
-												<Button
-													disabled={isPending}
-													variant="outline"
-													role="combobox"
-													className={cn(
-														'flex justify-between',
-														!field.value && 'text-neutral-600',
-													)}
-												>
-													{field.value
-														? generateClothingName(
-																clothingProvisions.find(
-																	(a) => a.id === field.value,
-																)?.clothing as Clothing,
-															)
-														: "Select the clothing provision you'd like to add"}
-													<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-												</Button>
-											</FormControl>
+										<PopoverTrigger render={<FormControl />}>
+											<Button
+												disabled={isPending}
+												variant="outline"
+												role="combobox"
+												className={cn(
+													'flex justify-between',
+													!field.value && 'text-neutral-600',
+												)}
+											>
+												{field.value
+													? generateClothingName(
+															clothingProvisions.find(
+																(a) => a.id === field.value,
+															)?.clothing as Clothing,
+														)
+													: "Select the clothing provision you'd like to add"}
+												<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+											</Button>
 										</PopoverTrigger>
 										<PopoverContent className="w-[--radix-popover-trigger-width] p-0">
 											<Command>
@@ -224,10 +220,8 @@ export function AddToContainerEssentialDialog({
 				}
 			}}
 		>
-			<DialogTrigger asChild>
-				<Button size="icon">
-					<Plus />
-				</Button>
+			<DialogTrigger render={<Button size="icon" />}>
+				<Plus />
 			</DialogTrigger>
 			<DialogContent>
 				<Form {...form}>
@@ -242,25 +236,23 @@ export function AddToContainerEssentialDialog({
 								<FormItem className="flex flex-col">
 									<FormLabel>Essential Provision</FormLabel>
 									<Popover open={comboOpen} onOpenChange={setComboOpen}>
-										<PopoverTrigger asChild>
-											<FormControl>
-												<Button
-													disabled={isPending}
-													variant="outline"
-													role="combobox"
-													className={cn(
-														'flex justify-between',
-														!field.value && 'text-neutral-600',
-													)}
-												>
-													{field.value
-														? essentialProvisions.find(
-																(a) => a.id === field.value,
-															)?.essential.name
-														: "Select the essential provision you'd like to add"}
-													<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-												</Button>
-											</FormControl>
+										<PopoverTrigger render={<FormControl />}>
+											<Button
+												disabled={isPending}
+												variant="outline"
+												role="combobox"
+												className={cn(
+													'flex justify-between',
+													!field.value && 'text-neutral-600',
+												)}
+											>
+												{field.value
+													? essentialProvisions.find(
+															(a) => a.id === field.value,
+														)?.essential.name
+													: "Select the essential provision you'd like to add"}
+												<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+											</Button>
 										</PopoverTrigger>
 										<PopoverContent className="w-[--radix-popover-trigger-width] p-0">
 											<Command>

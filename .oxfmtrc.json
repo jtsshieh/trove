@@ -1,0 +1,12 @@
+{
+	"$schema": "./node_modules/oxfmt/configuration_schema.json",
+	"useTabs": true,
+	"singleQuote": true,
+	"importOrder": ["^@/(.*)$", "^[./]"],
+	"importOrderSortSpecifiers": true,
+	"importOrderSeparation": true,
+	"sortTailwindcss": {},
+	"printWidth": 80,
+	"sortPackageJson": false,
+	"ignorePatterns": ["node_modules", ".next", "src/generated"]
+}

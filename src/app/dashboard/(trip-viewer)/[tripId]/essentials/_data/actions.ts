@@ -10,7 +10,7 @@ import { createEssentialProvisionSchema } from './schemas';
 
 export const createEssentialProvision = tripClient
 	.metadata({ actionName: 'createEssentialProvision' })
-	.schema(createEssentialProvisionSchema)
+	.inputSchema(createEssentialProvisionSchema)
 	.bindArgsSchemas<[tripId: z.ZodString]>([z.string()])
 	.action(
 		async ({

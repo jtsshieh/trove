@@ -1,8 +1,8 @@
+import type { Trip } from '@/generated/prisma/client';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import React from 'react';
 
-import { getAllTrips } from '../(trip-viewer)/[tripId]/_data/fetchers';
 import { EmptyList } from '../../../components/empty-list';
 import { Button } from '../../../components/ui/button';
 import {
@@ -14,9 +14,7 @@ import {
 } from '../../../components/ui/card';
 import { Skeleton } from '../../../components/ui/skeleton';
 
-export async function TripList() {
-	const trips = await getAllTrips();
-
+export function TripList({ trips }: { trips: Trip[] }) {
 	if (trips.length === 0) {
 		return (
 			<EmptyList
@@ -37,8 +35,11 @@ export async function TripList() {
 						</CardDescription>
 					</CardHeader>
 					<CardFooter className="justify-end">
-						<Button asChild>
-							<Link href={`/dashboard/${trip.id}`}>Open</Link>
+						<Button
+							nativeButton={false}
+							render={<Link href={`/dashboard/${trip.id}`} />}
+						>
+							Open
 						</Button>
 					</CardFooter>
 				</Card>

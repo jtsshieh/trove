@@ -1,9 +1,18 @@
+import { HydrationBoundary, dehydrate } from '@tanstack/react-query';
 import React, { Suspense } from 'react';
 
-import { CreateTripDialog } from './trip-dialogs';
-import { TripList, TripListLoading } from './trip-list';
+import { getQueryClient } from '@/lib/query-client';
 
-export default async function TripsPage() {
+import { tripsQueryOptions } from '../(trip-viewer)/[tripId]/_data/queries';
+import { TripListContent } from './page-wrapper';
+import { CreateTripDialog } from './trip-dialogs';
+import { TripListLoading } from './trip-list';
+
+export default function TripsPage() {
+	const queryClient = getQueryClient();
+	// Non-blocking: kick off the query without awaiting so the page can stream.
+	void queryClient.prefetchQuery(tripsQueryOptions);
+
 	return (
 		<div className="flex w-full flex-1 justify-center">
 			<div className="flex w-full max-w-screen-lg flex-1 flex-col">
@@ -16,9 +25,11 @@ export default async function TripsPage() {
 					</div>
 					<CreateTripDialog />
 				</div>
-				<Suspense fallback={<TripListLoading />}>
-					<TripList />
-				</Suspense>
+				<HydrationBoundary state={dehydrate(queryClient)}>
+					<Suspense fallback={<TripListLoading />}>
+						<TripListContent />
+					</Suspense>
+				</HydrationBoundary>
 			</div>
 		</div>
 	);

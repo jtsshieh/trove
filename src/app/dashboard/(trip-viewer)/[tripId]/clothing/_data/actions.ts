@@ -10,7 +10,7 @@ import { createClothingProvisionSchema } from './schemas';
 
 export const createClothingProvision = tripClient
 	.metadata({ actionName: 'createClothingProvision' })
-	.schema(createClothingProvisionSchema)
+	.inputSchema(createClothingProvisionSchema)
 	.bindArgsSchemas<[tripId: z.ZodString]>([z.string()])
 	.action(
 		async ({

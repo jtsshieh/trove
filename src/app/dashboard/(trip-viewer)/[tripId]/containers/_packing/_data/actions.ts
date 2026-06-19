@@ -15,7 +15,7 @@ import {
 
 export const markClothingProvisionPacked = clothingProvisionClient
 	.metadata({ actionName: 'markClothingProvisionPacked' })
-	.schema(markClothingProvisionPackedSchema)
+	.inputSchema(markClothingProvisionPackedSchema)
 	.bindArgsSchemas<[clothingProvisionId: z.ZodString]>([z.string()])
 	.action(
 		async ({
@@ -43,7 +43,7 @@ export const markClothingProvisionPacked = clothingProvisionClient
 
 export const markEssentialProvisionPacked = essentialProvisionClient
 	.metadata({ actionName: 'markEssentialProvisionPacked' })
-	.schema(markEssentialProvisionPackedSchema)
+	.inputSchema(markEssentialProvisionPackedSchema)
 	.bindArgsSchemas<[essentialProvisionId: z.ZodString]>([z.string()])
 	.action(
 		async ({

@@ -1,5 +1,6 @@
 import { Pants, Sock, TShirt } from '@phosphor-icons/react/dist/ssr';
-import { Clothing, ClothingCategory, ClothingProvision } from '@prisma/client';
+import type { Clothing, ClothingProvision } from '@/generated/prisma/client';
+import { ClothingCategory } from '@/generated/prisma/enums';
 import { format } from 'date-fns';
 import { RefreshCcw } from 'lucide-react';
 import Link from 'next/link';
@@ -86,13 +87,13 @@ export function ClothingProvisionList({
 													size="icon"
 													variant="ghost"
 													className="h-8 w-8"
-													asChild
+													render={
+														<Link
+															href={`/dashboard/${tripId}/clothing#${getNextIdx(provision.clothing.id, i)}`}
+														/>
+													}
 												>
-													<Link
-														href={`/dashboard/${tripId}/clothing#${getNextIdx(provision.clothing.id, i)}`}
-													>
-														<RefreshCcw size={16} />
-													</Link>
+													<RefreshCcw size={16} />
 												</Button>
 											)}
 

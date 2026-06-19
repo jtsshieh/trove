@@ -2,20 +2,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function Loading() {
 	return (
-		<div className="flex flex-col gap-4">
-			<div className="flex items-center gap-4">
-				<Skeleton className="h-[40px] w-[40px]" />
-				<div className="flex flex-1 flex-col gap-1">
-					<Skeleton className="h-[32px] w-[250px]" />
-					<Skeleton className="h-[24px] w-full" />
+		<>
+			<div className="sticky -top-6 mb-4 flex items-center gap-4 rounded-xl bg-neutral-200/75 p-2 backdrop-blur">
+				<Skeleton className="size-10 rounded-lg" />
+				<div className="flex-1 space-y-2">
+					<Skeleton className="h-6 w-48" />
+					<Skeleton className="h-4 w-72 max-w-full" />
 				</div>
-				<Skeleton className="h-[40px] w-[40px] md:w-[150px]" />
+				<Skeleton className="h-9 w-28" />
 			</div>
 			<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-				<Skeleton className="h-[200px] w-full rounded-xl" />
-				<Skeleton className="h-[200px] w-full rounded-xl" />
-				<Skeleton className="h-[200px] w-full rounded-xl" />
+				{Array.from({ length: 4 }).map((_, i) => (
+					<Skeleton key={i} className="h-40 w-full rounded-xl" />
+				))}
 			</div>
-		</div>
+		</>
 	);
 }

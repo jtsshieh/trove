@@ -1,9 +1,15 @@
-import { getAllEssentials } from './_data/fetchers';
-import { CreateEssentialDialog } from './essential-dialogs';
-import { EssentialsList } from './essentials-list';
+import { HydrationBoundary, dehydrate } from '@tanstack/react-query';
 
-export default async function EssentialsPage() {
-	const essentials = await getAllEssentials();
+import { getQueryClient } from '@/lib/query-client';
+
+import { essentialsQueryOptions } from './_data/queries';
+import { CreateEssentialDialog } from './essential-dialogs';
+import { EssentialsListContent } from './page-wrapper';
+
+export default function EssentialsPage() {
+	const queryClient = getQueryClient();
+	// Non-blocking: kick off the query without awaiting so the page can stream.
+	void queryClient.prefetchQuery(essentialsQueryOptions);
 
 	return (
 		<div className="flex w-full flex-1 justify-center">
@@ -17,7 +23,9 @@ export default async function EssentialsPage() {
 					</div>
 					<CreateEssentialDialog />
 				</div>
-				<EssentialsList essentials={essentials} />
+				<HydrationBoundary state={dehydrate(queryClient)}>
+					<EssentialsListContent />
+				</HydrationBoundary>
 			</div>
 		</div>
 	);

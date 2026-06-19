@@ -1,23 +1,11 @@
 'use client';
 
-import {
-	DndContext,
-	DragEndEvent,
-	DragOverlay,
-	DragStartEvent,
-	DraggableAttributes,
-	PointerSensor,
-	closestCenter,
-	useSensor,
-	useSensors,
-} from '@dnd-kit/core';
-import { SyntheticListenerMap } from '@dnd-kit/core/dist/hooks/utilities';
-import { restrictToWindowEdges } from '@dnd-kit/modifiers';
-import { SortableContext, useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { Container } from '@prisma/client';
+import { DragDropProvider, type DragEndEvent } from '@dnd-kit/react';
+import { useSortable } from '@dnd-kit/react/sortable';
 import { LexoRank } from 'lexorank';
-import { CSSProperties, startTransition, useOptimistic, useState } from 'react';
+import { startTransition, useOptimistic } from 'react';
+
+import type { Container } from '@/generated/prisma/client';
 
 import { EmptyList } from '../../../../../components/empty-list';
 import {
@@ -46,8 +34,6 @@ export function ContainerList({
 	containers: Container[];
 	sorting: boolean;
 }) {
-	const sensors = useSensors(useSensor(PointerSensor));
-
 	const [items, updateOrder] = useOptimistic(
 		containers,
 		(currentContainers, updatePayload: UpdatePayload) => {
@@ -60,8 +46,6 @@ export function ContainerList({
 		},
 	);
 
-	const [activeId, setActiveId] = useState<string | null>(null);
-
 	if (containers.length === 0)
 		return (
 			<EmptyList
@@ -70,102 +54,71 @@ export function ContainerList({
 			/>
 		);
 
-	function handleDragStart(event: DragStartEvent) {
-		const { active } = event;
-		setActiveId(active.id as string);
-	}
-
 	const handleDragEnd = (event: DragEndEvent) =>
 		startTransition(async () => {
-			const { active, over } = event;
-			if (active.id !== over?.id) {
-				const oldIndex = items.findIndex((x) => x.id === active.id);
-				const newIndex = items.findIndex((x) => x.id === over?.id);
+			const { source, target } = event.operation;
+			if (event.canceled || !source || !target || source.id === target.id)
+				return;
 
-				let order;
-				if (newIndex === 0) {
-					const next = items[newIndex];
-					order = LexoRank.parse(next.order).genPrev();
-				} else if (newIndex === items.length - 1) {
-					const prev = items[newIndex];
-					order = LexoRank.parse(prev.order).genNext();
-				} else {
-					const prev = items[newIndex];
-					const offset = oldIndex > newIndex ? -1 : 1;
-					const next = items[newIndex + offset];
-					order = LexoRank.parse(next.order).between(
-						LexoRank.parse(prev.order),
-					);
-				}
+			const oldIndex = items.findIndex((x) => x.id === source.id);
+			const newIndex = items.findIndex((x) => x.id === target.id);
+			if (oldIndex === -1 || newIndex === -1) return;
 
-				updateOrder({ idx: oldIndex, order: order.toString() });
-				await editContainer(items[oldIndex].id, {
-					order: order.toString(),
-				});
+			let order;
+			if (newIndex === 0) {
+				const next = items[newIndex];
+				order = LexoRank.parse(next.order).genPrev();
+			} else if (newIndex === items.length - 1) {
+				const prev = items[newIndex];
+				order = LexoRank.parse(prev.order).genNext();
+			} else {
+				const prev = items[newIndex];
+				const offset = oldIndex > newIndex ? -1 : 1;
+				const next = items[newIndex + offset];
+				order = LexoRank.parse(next.order).between(LexoRank.parse(prev.order));
 			}
 
-			setActiveId(null);
+			updateOrder({ idx: oldIndex, order: order.toString() });
+			await editContainer(items[oldIndex].id, {
+				order: order.toString(),
+			});
 		});
+
 	return (
 		<div className="grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-			<DndContext
-				sensors={sensors}
-				collisionDetection={closestCenter}
-				onDragStart={handleDragStart}
-				onDragEnd={handleDragEnd}
-			>
-				<SortableContext items={items}>
-					{items.map((container) => (
-						<SortableContainer
-							container={container}
-							key={container.id}
-							sorting={sorting}
-						/>
-					))}
-				</SortableContext>
-				<DragOverlay modifiers={[restrictToWindowEdges]}>
-					{activeId ? (
-						<ContainerCard
-							container={
-								containers.find((pc) => pc.id === activeId) as Container
-							}
-							sorting={true}
-							overlay={true}
-						/>
-					) : null}
-				</DragOverlay>
-			</DndContext>
+			<DragDropProvider onDragEnd={handleDragEnd}>
+				{items.map((container, index) => (
+					<SortableContainer
+						container={container}
+						index={index}
+						key={container.id}
+						sorting={sorting}
+					/>
+				))}
+			</DragDropProvider>
 		</div>
 	);
 }
 
 function SortableContainer({
 	container,
+	index,
 	sorting,
 }: {
 	container: Container;
+	index: number;
 	sorting: boolean;
 }) {
-	const {
-		isDragging,
-		attributes,
-		listeners,
-		setNodeRef,
-		transform,
-		transition,
-	} = useSortable({ id: container.id });
+	const { ref, isDragging } = useSortable({
+		id: container.id,
+		index,
+		disabled: !sorting,
+	});
 
-	const style = {
-		transform: CSS.Transform.toString(transform),
-		transition,
-	};
 	return (
 		<ContainerCard
 			container={container}
-			style={style}
-			setNodeRef={sorting ? setNodeRef : undefined}
-			attributes={sorting ? attributes : undefined}
-			listeners={sorting ? listeners : undefined}
+			setNodeRef={sorting ? ref : undefined}
 			isDragging={isDragging}
 			sorting={sorting}
 		/>
@@ -174,19 +127,13 @@ function SortableContainer({
 
 function ContainerCard({
 	container,
-	style,
 	setNodeRef,
-	attributes,
-	listeners,
 	isDragging = false,
 	sorting = false,
 	overlay = false,
 }: {
 	container: Container;
-	style?: CSSProperties;
 	setNodeRef?: (node: HTMLElement | null) => void;
-	attributes?: DraggableAttributes;
-	listeners?: SyntheticListenerMap;
 	isDragging?: boolean;
 	sorting?: boolean;
 	overlay?: boolean;
@@ -199,10 +146,7 @@ function ContainerCard({
 				sorting && 'cursor-grab touch-none select-none',
 				overlay && 'shadow-2xl',
 			)}
-			style={style}
 			ref={setNodeRef}
-			{...listeners}
-			{...attributes}
 		>
 			<CardHeader className="flex-1 flex-row justify-between gap-2">
 				<div className="flex flex-col">

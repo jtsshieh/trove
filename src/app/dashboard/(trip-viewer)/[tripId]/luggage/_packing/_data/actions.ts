@@ -9,7 +9,7 @@ import { markContainerPackedSchema } from './schemas';
 
 export const markContainerPacked = containerProvisionClient
 	.metadata({ actionName: 'markContainerPacked' })
-	.schema(markContainerPackedSchema)
+	.inputSchema(markContainerPackedSchema)
 	.bindArgsSchemas<[containerProvisionId: z.ZodString]>([z.string()])
 	.action(
 		async ({

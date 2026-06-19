@@ -1,7 +1,8 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Essential, EssentialCategory } from '@prisma/client';
+import type { Essential } from '@/generated/prisma/client';
+import { EssentialCategory } from '@/generated/prisma/enums';
 import { Plus, Trash } from 'lucide-react';
 import React, { FormEvent, useEffect, useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
@@ -67,11 +68,13 @@ export function CreateEssentialDialog() {
 				}
 			}}
 		>
-			<DialogTrigger asChild>
-				<Button size="icon" className="gap-1 sm:w-auto sm:px-4 sm:py-2">
-					<Plus />
-					<span className="hidden sm:block">Add Essential</span>
-				</Button>
+			<DialogTrigger
+				render={
+					<Button size="icon" className="gap-1 sm:w-auto sm:px-4 sm:py-2" />
+				}
+			>
+				<Plus />
+				<span className="hidden sm:block">Add Essential</span>
 			</DialogTrigger>
 			<DialogContent>
 				<Form {...form}>
@@ -174,8 +177,8 @@ export function EditEssentialDialog({ essential }: { essential: Essential }) {
 				}
 			}}
 		>
-			<DialogTrigger asChild>
-				<Button variant="secondary">Edit</Button>
+			<DialogTrigger render={<Button variant="secondary" />}>
+				Edit
 			</DialogTrigger>
 			<DialogContent>
 				<Form {...form}>
@@ -250,36 +253,32 @@ export function DeleteEssentialDialog({ essential }: { essential: Essential }) {
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				<Button size="icon" variant="destructive">
-					<Trash />
-				</Button>
+			<DialogTrigger render={<Button size="icon" variant="destructive" />}>
+				<Trash />
 			</DialogTrigger>
-			<DialogContent asChild>
-				<form onSubmit={onSubmit}>
-					<DialogHeader>
-						<DialogTitle>Delete essential</DialogTitle>
-						<DialogDescription>
-							Are you sure you want to delete {essential.name}? This action is
-							irreversible.
-						</DialogDescription>
-					</DialogHeader>
-					<DialogFooter>
-						<Button
-							onClick={(e) => {
-								e.preventDefault();
-								setOpen(false);
-							}}
-							variant="secondary"
-							disabled={isPending}
-						>
-							Cancel
-						</Button>
-						<Button type="submit" loading={isPending}>
-							Delete
-						</Button>
-					</DialogFooter>
-				</form>
+			<DialogContent render={<form onSubmit={onSubmit} />}>
+				<DialogHeader>
+					<DialogTitle>Delete essential</DialogTitle>
+					<DialogDescription>
+						Are you sure you want to delete {essential.name}? This action is
+						irreversible.
+					</DialogDescription>
+				</DialogHeader>
+				<DialogFooter>
+					<Button
+						onClick={(e) => {
+							e.preventDefault();
+							setOpen(false);
+						}}
+						variant="secondary"
+						disabled={isPending}
+					>
+						Cancel
+					</Button>
+					<Button type="submit" loading={isPending}>
+						Delete
+					</Button>
+				</DialogFooter>
 			</DialogContent>
 		</Dialog>
 	);

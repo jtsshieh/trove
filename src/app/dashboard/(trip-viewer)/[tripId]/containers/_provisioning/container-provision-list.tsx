@@ -1,38 +1,20 @@
 'use client';
 
-import {
-	CollisionDetection,
-	DndContext,
-	DragEndEvent,
-	PointerSensor,
-	UniqueIdentifier,
-	closestCenter,
-	getFirstCollision,
-	pointerWithin,
-	rectIntersection,
-	useDroppable,
-	useSensor,
-	useSensors,
-} from '@dnd-kit/core';
-import { SortableContext, useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import {
+import { DragDropProvider, type DragEndEvent } from '@dnd-kit/react';
+import { useSortable } from '@dnd-kit/react/sortable';
+import { LexoRank } from 'lexorank';
+import { Menu } from 'lucide-react';
+import { startTransition, useOptimistic } from 'react';
+
+import type {
 	Clothing,
 	ClothingProvision,
 	Container,
 	ContainerProvision,
-	ContainerType,
 	Essential,
 	EssentialProvision,
-} from '@prisma/client';
-import { LexoRank } from 'lexorank';
-import { Menu } from 'lucide-react';
-import React, {
-	startTransition,
-	useCallback,
-	useOptimistic,
-	useState,
-} from 'react';
+} from '@/generated/prisma/client';
+import { ContainerType } from '@/generated/prisma/enums';
 
 import { EmptyList } from '../../../../../../components/empty-list';
 import {
@@ -69,10 +51,9 @@ interface UpdatePayload {
 	order: string;
 }
 
-export function ContainerProvisionList({ trip }: ContainerProvisionListProps) {
-	const sensors = useSensors(useSensor(PointerSensor));
-	const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
+type OptimisticUpdate = (payload: UpdatePayload) => void;
 
+export function ContainerProvisionList({ trip }: ContainerProvisionListProps) {
 	const [containerProvisions, updateOrder] = useOptimistic(
 		trip.containerProvisions,
 		(currentContainerProvisions, updatePayload: UpdatePayload) => {
@@ -107,67 +88,9 @@ export function ContainerProvisionList({ trip }: ContainerProvisionListProps) {
 			newContainerProvision[propName].sort((a, b) =>
 				a.containerOrder!.localeCompare(b.containerOrder!),
 			);
-			console.log(updatePayload);
-			console.log(JSON.stringify(newContainerProvision[propName]));
 
 			return newContainerProvisions;
 		},
-	);
-
-	const collisionDetectionStrategy: CollisionDetection = useCallback(
-		(args) => {
-			// Start by finding any intersecting droppable
-			const pointerIntersections = pointerWithin(args);
-			const intersections =
-				pointerIntersections.length > 0
-					? // If there are droppables intersecting with the pointer, return those
-						pointerIntersections
-					: rectIntersection(args);
-			let overId = getFirstCollision(intersections, 'id');
-
-			if (overId != null) {
-				const provision = containerProvisions.find((p) => p.id === overId);
-
-				// mouse is over a container--need to override with a container item
-				if (provision) {
-					const propName =
-						provision.container.type === ContainerType.Clothes
-							? 'clothingProvisions'
-							: 'essentialProvisions';
-
-					// If a container is matched and it contains items (columns 'A', 'B', 'C')
-					if (provision[propName].length > 0) {
-						// Return the closest droppable within that container
-						overId = closestCenter({
-							...args,
-							droppableContainers: args.droppableContainers.filter(
-								(container) =>
-									container.id !== overId &&
-									provision[propName].some((c) => c.id === container.id),
-							),
-						})[0]?.id;
-					}
-				}
-
-				// lastOverId.current = overId;
-
-				return [{ id: overId }];
-			}
-
-			return intersections;
-
-			// // When a draggable item moves to a new container, the layout may shift
-			// // and the `overId` may become `null`. We manually set the cached `lastOverId`
-			// // to the id of the draggable item that was moved to the new container, otherwise
-			// // the previous `overId` will be returned which can cause items to incorrectly shift positions
-			// if (recentlyMovedToNewContainer.current) {
-			// 	lastOverId.current = activeId;
-			// }
-			//
-			// // If no droppable is matched, return the last match
-			// return lastOverId.current ? [{ id: lastOverId.current }] : [];
-		},
-		[activeId, containerProvisions],
 	);
 
 	if (trip.containerProvisions.length === 0) {
@@ -203,103 +126,24 @@ export function ContainerProvisionList({ trip }: ContainerProvisionListProps) {
 			),
 	);
 
-	function findContainerProvision(provisionId: string) {
-		return trip.containerProvisions.find((containerProvision) => {
-			const isClothes =
-				containerProvision.container.type === ContainerType.Clothes;
-			const children = isClothes
-				? containerProvision.clothingProvisions
-				: containerProvision.essentialProvisions;
-
-			return children.some((provision) => provision.id === provisionId);
-		});
-	}
-	function handleDragEnd(event: DragEndEvent) {
-		const { active, over } = event;
-
-		if (!over || !active) return;
-
-		if (over.data?.current?.allowed === active.data?.current?.allowed) {
-			startTransition(async () => {
-				if (active.id !== over?.id) {
-					const containerProvision = findContainerProvision(
-						active.id as string,
-					);
-					if (!containerProvision) return; // todo: handle this error
-					const isClothes =
-						containerProvision.container.type === ContainerType.Clothes;
-					const items = isClothes
-						? containerProvision.clothingProvisions
-						: containerProvision.essentialProvisions;
-					console.log('items', items);
-
-					const oldIndex = items.findIndex((x) => x.id === active.id);
-					const newIndex = items.findIndex((x) => x.id === over?.id);
-
-					let order;
-					if (newIndex === 0) {
-						const next = items[newIndex];
-						order = LexoRank.parse(next.containerOrder!).genPrev();
-					} else if (newIndex === items.length - 1) {
-						const prev = items[newIndex];
-						order = LexoRank.parse(prev.containerOrder!).genNext();
-					} else {
-						const prev = items[newIndex];
-						const offset = oldIndex > newIndex ? -1 : 1;
-						const next = items[newIndex + offset];
-						order = LexoRank.parse(next.containerOrder!).between(
-							LexoRank.parse(prev.containerOrder!),
-						);
-					}
-
-					updateOrder({
-						idx: oldIndex,
-						order: order.toString(),
-						containerProvisionId: containerProvision.id,
-					});
-					await (
-						isClothes
-							? changeClothingProvisionContainerOrder
-							: changeEssentialProvisionContainerOrder
-					)(items[oldIndex].id, order.toString());
-					// if (over.data?.current?.allowed === 'clothing') {
-					// 	await addClothingProvisionToContainer(
-					// 		over.id as string,
-					// 		active.id as string,
-					// 	);
-					// } else {
-					// 	await addEssentialProvisionToContainer(
-					// 		over.id as string,
-					// 		active.id as string,
-					// 	);
-					// }
-				}
-			});
-		}
-	}
-
 	return (
-		<DndContext
-			sensors={sensors}
-			collisionDetection={collisionDetectionStrategy}
-			onDragEnd={handleDragEnd}
-		>
-			<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-				{containerProvisions.map((containerProvision) => (
-					<ContainerProvisionCard
-						key={containerProvision.id}
-						containerProvision={containerProvision}
-						unusedEssentialProvisions={unusedEssentialProvisions}
-						unusedClothingProvisions={unusedClothingProvisions}
-					/>
-				))}
-			</div>
-		</DndContext>
+		<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+			{containerProvisions.map((containerProvision) => (
+				<ContainerProvisionCard
+					key={containerProvision.id}
+					containerProvision={containerProvision}
+					updateOrder={updateOrder}
+					unusedEssentialProvisions={unusedEssentialProvisions}
+					unusedClothingProvisions={unusedClothingProvisions}
+				/>
+			))}
+		</div>
 	);
 }
 
 function ContainerProvisionCard({
 	containerProvision,
+	updateOrder,
 	unusedClothingProvisions,
 	unusedEssentialProvisions,
 }: {
@@ -308,84 +152,103 @@ function ContainerProvisionCard({
 		clothingProvisions: (ClothingProvision & { clothing: Clothing })[];
 		essentialProvisions: (EssentialProvision & { essential: Essential })[];
 	};
-
+	updateOrder: OptimisticUpdate;
 	unusedClothingProvisions: (ClothingProvision & { clothing: Clothing })[];
 	unusedEssentialProvisions: (EssentialProvision & { essential: Essential })[];
 }) {
-	const containerType =
-		containerProvision.container.type === ContainerType.Clothes
-			? 'clothes'
-			: 'essentials';
-	const { isOver, active, setNodeRef } = useDroppable({
-		id: containerProvision.id,
-		data: {
-			type: 'container',
-			allowed: containerType,
-		},
-	});
+	const isClothes = containerProvision.container.type === ContainerType.Clothes;
+	const items = isClothes
+		? containerProvision.clothingProvisions
+		: containerProvision.essentialProvisions;
+
+	const handleDragEnd = (event: DragEndEvent) =>
+		startTransition(async () => {
+			const { source, target } = event.operation;
+			if (event.canceled || !source || !target || source.id === target.id)
+				return;
+
+			const oldIndex = items.findIndex((x) => x.id === source.id);
+			const newIndex = items.findIndex((x) => x.id === target.id);
+			if (oldIndex === -1 || newIndex === -1) return;
+
+			let order;
+			if (newIndex === 0) {
+				const next = items[newIndex];
+				order = LexoRank.parse(next.containerOrder!).genPrev();
+			} else if (newIndex === items.length - 1) {
+				const prev = items[newIndex];
+				order = LexoRank.parse(prev.containerOrder!).genNext();
+			} else {
+				const prev = items[newIndex];
+				const offset = oldIndex > newIndex ? -1 : 1;
+				const next = items[newIndex + offset];
+				order = LexoRank.parse(next.containerOrder!).between(
+					LexoRank.parse(prev.containerOrder!),
+				);
+			}
+
+			updateOrder({
+				idx: oldIndex,
+				order: order.toString(),
+				containerProvisionId: containerProvision.id,
+			});
+			await (
+				isClothes
+					? changeClothingProvisionContainerOrder
+					: changeEssentialProvisionContainerOrder
+			)(items[oldIndex].id, order.toString());
+		});
 
 	return (
-		<SortableContext
-			items={
-				containerType === 'clothes'
-					? containerProvision.clothingProvisions
-					: containerProvision.essentialProvisions
-			}
-		>
-			<Card
-				ref={setNodeRef}
-				className={cn(
-					isOver &&
-						(active?.data?.current?.allowed === containerType
-							? 'border-dashed bg-neutral-100'
-							: 'border-dashed border-red-300 bg-red-50'),
-				)}
-			>
-				<CardHeader className="flex flex-row items-center gap-2 space-y-0">
-					<div className="flex-1">
-						<CardTitle>{containerProvision.container.name}</CardTitle>
-						<CardDescription>
-							{containerProvision.container.type}
-						</CardDescription>
-					</div>
-					{containerType === 'clothes' ? (
-						<AddToContainerClothingDialog
-							clothingProvisions={unusedClothingProvisions}
-							containerProvision={containerProvision}
-						/>
-					) : (
-						<AddToContainerEssentialDialog
-							essentialProvisions={unusedEssentialProvisions}
-							containerProvisions={containerProvision}
-						/>
-					)}
-					<DeleteContainerProvisionDialog
+		<Card>
+			<CardHeader className="flex flex-row items-center gap-2 space-y-0">
+				<div className="flex-1">
+					<CardTitle>{containerProvision.container.name}</CardTitle>
+					<CardDescription>{containerProvision.container.type}</CardDescription>
+				</div>
+				{isClothes ? (
+					<AddToContainerClothingDialog
+						clothingProvisions={unusedClothingProvisions}
 						containerProvision={containerProvision}
 					/>
-				</CardHeader>
-				<CardContent className="flex flex-col">
-					{containerType === 'clothes'
-						? containerProvision.clothingProvisions.map(({ clothing, id }) => (
-								<ClothingProvisionItem
-									key={id}
-									clothingProvisionId={id}
-									clothingName={generateClothingName(clothing)}
-									containerProvisionId={containerProvision.id}
-								/>
-							))
+				) : (
+					<AddToContainerEssentialDialog
+						essentialProvisions={unusedEssentialProvisions}
+						containerProvisions={containerProvision}
+					/>
+				)}
+				<DeleteContainerProvisionDialog
+					containerProvision={containerProvision}
+				/>
+			</CardHeader>
+			<CardContent className="flex flex-col">
+				<DragDropProvider onDragEnd={handleDragEnd}>
+					{isClothes
+						? containerProvision.clothingProvisions.map(
+								({ clothing, id }, index) => (
+									<ClothingProvisionItem
+										key={id}
+										index={index}
+										clothingProvisionId={id}
+										clothingName={generateClothingName(clothing)}
+										containerProvisionId={containerProvision.id}
+									/>
+								),
+							)
 						: containerProvision.essentialProvisions.map(
-								({ essential, id }) => (
+								({ essential, id }, index) => (
 									<EssentialProvisionItem
 										key={id}
+										index={index}
 										essentialProvisionId={id}
 										essentialName={essential.name}
 										containerProvisionId={containerProvision.id}
 									/>
 								),
 							)}
-				</CardContent>
-			</Card>
-		</SortableContext>
+				</DragDropProvider>
+			</CardContent>
+		</Card>
 	);
 }
 
@@ -393,40 +256,30 @@ function ClothingProvisionItem({
 	clothingProvisionId,
 	clothingName,
 	containerProvisionId,
+	index,
 }: {
 	clothingProvisionId: string;
 	clothingName: string;
 	containerProvisionId: string;
+	index: number;
 }) {
-	const {
-		attributes,
-		listeners,
-		setNodeRef,
-		transform,
-		transition,
-		isDragging,
-	} = useSortable({
+	const { ref, handleRef, isDragging } = useSortable({
 		id: clothingProvisionId,
-		data: {
-			allowed: 'clothes',
-		},
+		index,
 	});
-
-	const style = {
-		transform: CSS.Translate.toString(transform),
-		transition,
-	};
 
 	return (
 		<div
 			className={cn(
-				'flex cursor-default touch-none select-none items-center justify-between gap-2 rounded-lg p-1',
+				'flex cursor-default items-center justify-between gap-2 rounded-lg p-1 select-none',
 				isDragging && 'z-50 bg-white shadow-2xl',
 			)}
-			ref={setNodeRef}
-			style={style}
+			ref={ref}
 		>
-			<Menu {...listeners} className="cursor-grab text-neutral-400" />
+			<Menu
+				ref={handleRef}
+				className="cursor-grab touch-none text-neutral-400"
+			/>
 			<p className="text-md flex-1">{clothingName}</p>
 			<DeleteFromContainerClothing
 				clothingProvisionId={clothingProvisionId}
@@ -440,40 +293,30 @@ function EssentialProvisionItem({
 	essentialProvisionId,
 	essentialName,
 	containerProvisionId,
+	index,
 }: {
 	essentialProvisionId: string;
 	essentialName: string;
 	containerProvisionId: string;
+	index: number;
 }) {
-	const {
-		attributes,
-		listeners,
-		setNodeRef,
-		transform,
-		transition,
-		isDragging,
-	} = useSortable({
+	const { ref, handleRef, isDragging } = useSortable({
 		id: essentialProvisionId,
-		data: {
-			allowed: 'essentials',
-		},
+		index,
 	});
-
-	const style = {
-		transform: CSS.Translate.toString(transform),
-		transition,
-	};
 
 	return (
 		<div
 			className={cn(
-				'flex cursor-default touch-none select-none items-center justify-between gap-2 rounded-lg p-1',
+				'flex cursor-default items-center justify-between gap-2 rounded-lg p-1 select-none',
 				isDragging && 'z-50 bg-white shadow-2xl',
 			)}
-			ref={setNodeRef}
-			style={style}
+			ref={ref}
 		>
-			<Menu {...listeners} className="cursor-grab text-neutral-400" />
+			<Menu
+				ref={handleRef}
+				className="cursor-grab touch-none text-neutral-400"
+			/>
 			<p className="text-md flex-1">{essentialName}</p>
 			<DeleteFromContainerEssential
 				essentialProvisionId={essentialProvisionId}

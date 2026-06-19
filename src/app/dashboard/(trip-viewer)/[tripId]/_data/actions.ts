@@ -7,15 +7,20 @@ import { authenticatedActionClient } from '@/lib/action-client';
 import { prisma } from '@/lib/db.server';
 
 import { tripClient } from './clients';
+import { getAllTrips } from './fetchers';
 import {
 	changeTripModeSchema,
 	createTripSchema,
 	editTripSchema,
 } from './schemas';
 
+export async function fetchAllTrips() {
+	return getAllTrips();
+}
+
 export const createTrip = authenticatedActionClient
 	.metadata({ actionName: 'createTrip' })
-	.schema(createTripSchema)
+	.inputSchema(createTripSchema)
 	.action(async ({ parsedInput: { name, date }, ctx: { user } }) => {
 		const trip = await prisma.trip.create({
 			data: {
@@ -37,7 +42,7 @@ export const createTrip = authenticatedActionClient
 
 export const editTrip = tripClient
 	.metadata({ actionName: 'editTrip' })
-	.schema(editTripSchema)
+	.inputSchema(editTripSchema)
 	.bindArgsSchemas<[tripId: z.ZodString]>([z.string()])
 	.action(
 		async ({ parsedInput: { name, date }, bindArgsParsedInputs: [tripId] }) => {
@@ -79,7 +84,7 @@ export const deleteTrip = tripClient
 
 export const changeTripMode = tripClient
 	.metadata({ actionName: 'changeTripMode' })
-	.schema(changeTripModeSchema)
+	.inputSchema(changeTripModeSchema)
 	.bindArgsSchemas<[tripId: z.ZodString]>([z.string()])
 	.action(async ({ parsedInput: { mode }, bindArgsParsedInputs: [tripId] }) => {
 		await prisma.trip.update({

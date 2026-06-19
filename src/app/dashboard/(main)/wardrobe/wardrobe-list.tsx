@@ -1,6 +1,6 @@
 'use client';
 
-import { Brand, Clothing, ClothingType } from '@prisma/client';
+import type { Brand, Clothing, ClothingType } from '@/generated/prisma/client';
 
 import {
 	Card,

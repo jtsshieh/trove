@@ -1,4 +1,4 @@
-import { TripMode } from '@prisma/client';
+import { TripMode } from '@/generated/prisma/enums';
 import { z } from 'zod';
 
 export const createTripSchema = z.object({

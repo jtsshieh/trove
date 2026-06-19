@@ -1,8 +1,5 @@
-import {
-	Essential,
-	EssentialCategory,
-	EssentialProvision,
-} from '@prisma/client';
+import type { Essential, EssentialProvision } from '@/generated/prisma/client';
+import { EssentialCategory } from '@/generated/prisma/enums';
 import { PillBottle } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import React from 'react';
@@ -12,19 +9,17 @@ import { getTripWithEssentialProvisions } from './_data/fetchers';
 import { CreateEssentialProvisionDialog } from './create-essential-provision-dialog';
 import { EssentialProvisionList } from './essential-provision-list';
 
-export default async function EssentialProvisionsPage(
-    props: {
-        params: Promise<{ tripId: string }>;
-    }
-) {
-    const params = await props.params;
-    const trip = await getTripWithEssentialProvisions(params.tripId);
+export default async function EssentialProvisionsPage(props: {
+	params: Promise<{ tripId: string }>;
+}) {
+	const params = await props.params;
+	const trip = await getTripWithEssentialProvisions(params.tripId);
 
-    if (!trip) return notFound();
+	if (!trip) return notFound();
 
-    const essentials = await getAllEssentials();
+	const essentials = await getAllEssentials();
 
-    const groups: Record<
+	const groups: Record<
 		EssentialCategory,
 		(EssentialProvision & { essential: Essential })[]
 	> = {
@@ -33,15 +28,15 @@ export default async function EssentialProvisionsPage(
 		[EssentialCategory.Electronic]: [],
 	};
 
-    trip.essentialProvisions.forEach((provision) => {
+	trip.essentialProvisions.forEach((provision) => {
 		groups[provision.essential.category].push(provision);
 	});
 
-    const usedEssentials = trip.essentialProvisions.map(
+	const usedEssentials = trip.essentialProvisions.map(
 		(provision) => provision.essential.id,
 	);
 
-    return (
+	return (
 		<>
 			<div className="mb-4 flex items-center gap-4">
 				<PillBottle className="h-10 w-10" />

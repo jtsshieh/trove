@@ -94,8 +94,8 @@ export async function verifyRegistration(
 			user: { connect: { id: user.id } },
 			webauthnUserId,
 			credentialId: verification.registrationInfo.credentialID,
-			publicKey: Buffer.from(
-				verification.registrationInfo.credentialPublicKey.buffer,
+			publicKey: new Uint8Array(
+				verification.registrationInfo.credentialPublicKey,
 			),
 			counter: verification.registrationInfo.counter,
 			name:

@@ -6,11 +6,16 @@ import { z } from 'zod';
 
 import { authenticatedActionClient } from '../../../../../../lib/action-client';
 import { prisma } from '../../../../../../lib/db.server';
+import { getAllContainers } from './fetchers';
 import { createContainerSchema, editContainerSchema } from './schemas';
+
+export async function fetchAllContainers() {
+	return getAllContainers();
+}
 
 export const createContainer = authenticatedActionClient
 	.metadata({ actionName: 'createContainer' })
-	.schema(createContainerSchema)
+	.inputSchema(createContainerSchema)
 	.action(async ({ parsedInput: { name, type }, ctx: { user } }) => {
 		const lastcontainer = await prisma.container.findFirst({
 			where: { userId: user.id },
@@ -56,7 +61,7 @@ const containerClient = authenticatedActionClient.use(
 
 export const editContainer = containerClient
 	.metadata({ actionName: 'editContainer' })
-	.schema(editContainerSchema)
+	.inputSchema(editContainerSchema)
 	.bindArgsSchemas<[containerId: z.ZodString]>([z.string()])
 	.action(
 		async ({ parsedInput: { name, type, order }, ctx: { container } }) => {

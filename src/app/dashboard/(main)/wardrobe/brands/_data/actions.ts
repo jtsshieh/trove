@@ -3,7 +3,12 @@
 import { revalidatePath } from 'next/cache';
 
 import { prisma } from '../../../../../../lib/db.server';
+import { getAllBrands } from './fetchers';
 import { createBrandSchema, editBrandSchema } from './schemas';
+
+export async function fetchAllBrands() {
+	return getAllBrands();
+}
 
 export async function createBrand(data: unknown) {
 	const { name } = createBrandSchema.parse(data);

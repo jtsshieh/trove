@@ -1,6 +1,7 @@
 'use client';
 
-import { Trip, TripMode } from '@prisma/client';
+import type { Trip } from '@/generated/prisma/client';
+import { TripMode } from '@/generated/prisma/enums';
 import { format } from 'date-fns';
 import {
 	Box,
@@ -81,7 +82,7 @@ export function TripSideNav({ trip }: { trip: Trip }) {
 
 	return (
 		<nav className="r-0 flex h-full min-h-0 flex-col gap-2 overflow-y-auto sm:border-r">
-			<div className="flex flex-col gap-4 border-b px-8 pb-4 pt-8">
+			<div className="flex flex-col gap-4 border-b px-8 pt-8 pb-4">
 				<div className="flex flex-col">
 					<h1 className="text-xl font-bold">{trip.name}</h1>
 					<p className="text-sm">
@@ -106,20 +107,22 @@ export function TripSideNav({ trip }: { trip: Trip }) {
 								) &&
 									'bg-neutral-900 text-neutral-100 hover:bg-neutral-800 hover:text-neutral-100',
 							)}
-							asChild
+							nativeButton={false}
+							render={<Link href={`/dashboard/${trip.id}${href}`} />}
 						>
-							<Link href={`/dashboard/${trip.id}${href}`}>
-								{icon} {name}
-							</Link>
+							{icon} {name}
 						</Button>
 					))}
 			</div>
 
 			<div className="mt-auto p-4">
-				<Button variant="ghost" asChild className="w-full justify-start">
-					<Link href="/dashboard">
-						<ChevronLeft /> Return to Dashboard
-					</Link>
+				<Button
+					variant="ghost"
+					className="w-full justify-start"
+					nativeButton={false}
+					render={<Link href="/dashboard" />}
+				>
+					<ChevronLeft /> Return to Dashboard
 				</Button>
 			</div>
 		</nav>
@@ -136,10 +139,8 @@ export function MobileTripNav({ trip }: { trip: Trip }) {
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetTrigger asChild>
-				<Button variant="outline" size="icon">
-					<Menu />
-				</Button>
+			<SheetTrigger render={<Button variant="outline" size="icon" />}>
+				<Menu />
 			</SheetTrigger>
 			<SheetContent side="left" className="h-full p-0">
 				<TripSideNav trip={trip} />

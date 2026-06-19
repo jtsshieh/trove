@@ -1,12 +1,12 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
+import type {
 	Container,
 	ContainerProvision,
 	Luggage,
 	LuggageProvision,
-} from '@prisma/client';
+} from '@/generated/prisma/client';
 import { ChevronsUpDown, Plus, Trash, TrashIcon } from 'lucide-react';
 import React, { FormEvent, useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
@@ -94,10 +94,8 @@ export function AddContainerToLuggageDialog({
 				}
 			}}
 		>
-			<DialogTrigger asChild>
-				<Button size="icon">
-					<Plus />
-				</Button>
+			<DialogTrigger render={<Button size="icon" />}>
+				<Plus />
 			</DialogTrigger>
 			<DialogContent>
 				<Form {...form}>
@@ -112,25 +110,23 @@ export function AddContainerToLuggageDialog({
 								<FormItem className="flex flex-col">
 									<FormLabel>Container</FormLabel>
 									<Popover open={comboOpen} onOpenChange={setComboOpen}>
-										<PopoverTrigger asChild>
-											<FormControl>
-												<Button
-													disabled={isPending}
-													variant="outline"
-													role="combobox"
-													className={cn(
-														'flex justify-between',
-														!field.value && 'text-neutral-600',
-													)}
-												>
-													{field.value
-														? containerProvisions.find(
-																(a) => a.id === field.value,
-															)?.container?.name
-														: "Select the container provision you'd like to add"}
-													<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-												</Button>
-											</FormControl>
+										<PopoverTrigger render={<FormControl />}>
+											<Button
+												disabled={isPending}
+												variant="outline"
+												role="combobox"
+												className={cn(
+													'flex justify-between',
+													!field.value && 'text-neutral-600',
+												)}
+											>
+												{field.value
+													? containerProvisions.find(
+															(a) => a.id === field.value,
+														)?.container?.name
+													: "Select the container provision you'd like to add"}
+												<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+											</Button>
 										</PopoverTrigger>
 										<PopoverContent className="w-[--radix-popover-trigger-width] p-0">
 											<Command>
@@ -220,37 +216,33 @@ export function DeleteLuggageProvisionDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				<Button size="icon" variant="destructive">
-					<Trash />
-				</Button>
+			<DialogTrigger render={<Button size="icon" variant="destructive" />}>
+				<Trash />
 			</DialogTrigger>
-			<DialogContent asChild>
-				<form onSubmit={onSubmit}>
-					<DialogHeader>
-						<DialogTitle>Delete Luggage Provision</DialogTitle>
-						<DialogDescription>
-							Are you sure you want to remove {luggageProvision.luggage.name}{' '}
-							from this trip? This luggage will NOT be deleted, only it's
-							provision to this trip.
-						</DialogDescription>
-					</DialogHeader>
-					<DialogFooter>
-						<Button
-							onClick={(e) => {
-								e.preventDefault();
-								setOpen(false);
-							}}
-							variant="secondary"
-							disabled={isPending}
-						>
-							Cancel
-						</Button>
-						<Button type="submit" loading={isPending}>
-							Delete
-						</Button>
-					</DialogFooter>
-				</form>
+			<DialogContent render={<form onSubmit={onSubmit} />}>
+				<DialogHeader>
+					<DialogTitle>Delete Luggage Provision</DialogTitle>
+					<DialogDescription>
+						Are you sure you want to remove {luggageProvision.luggage.name} from
+						this trip? This luggage will NOT be deleted, only it's provision to
+						this trip.
+					</DialogDescription>
+				</DialogHeader>
+				<DialogFooter>
+					<Button
+						onClick={(e) => {
+							e.preventDefault();
+							setOpen(false);
+						}}
+						variant="secondary"
+						disabled={isPending}
+					>
+						Cancel
+					</Button>
+					<Button type="submit" loading={isPending}>
+						Delete
+					</Button>
+				</DialogFooter>
 			</DialogContent>
 		</Dialog>
 	);

@@ -1,35 +1,14 @@
 'use client';
 
-import {
-	DndContext,
-	DragEndEvent,
-	DragOverlay,
-	DragStartEvent,
-	DraggableAttributes,
-	PointerSensor,
-	closestCenter,
-	useSensor,
-	useSensors,
-} from '@dnd-kit/core';
-import { SyntheticListenerMap } from '@dnd-kit/core/dist/hooks/utilities';
-import { restrictToWindowEdges } from '@dnd-kit/modifiers';
-import { SortableContext, useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { DragDropProvider, type DragEndEvent } from '@dnd-kit/react';
+import { useSortable } from '@dnd-kit/react/sortable';
 import { File, HandSoap, Plug } from '@phosphor-icons/react';
-import {
-	Essential,
-	EssentialCategory,
-	EssentialProvision,
-} from '@prisma/client';
 import { LexoRank } from 'lexorank';
 import { Menu, TrashIcon } from 'lucide-react';
-import React, {
-	CSSProperties,
-	startTransition,
-	useOptimistic,
-	useState,
-	useTransition,
-} from 'react';
+import { startTransition, useOptimistic, useTransition } from 'react';
+
+import type { Essential, EssentialProvision } from '@/generated/prisma/client';
+import { EssentialCategory } from '@/generated/prisma/enums';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -87,7 +66,6 @@ function EssentialCategoryCard({
 	meta: UnwrapArray<typeof essentialCategories>;
 	provisions: (EssentialProvision & { essential: Essential })[];
 }) {
-	const sensors = useSensors(useSensor(PointerSensor));
 	const [items, updateOrder] = useOptimistic(
 		provisions,
 		(currentProvisions, updatePayload: UpdatePayload) => {
@@ -99,44 +77,33 @@ function EssentialCategoryCard({
 			return newProvisions.sort((a, b) => a.order.localeCompare(b.order));
 		},
 	);
-	const [activeId, setActiveId] = useState<string | null>(null);
-
-	function handleDragStart(event: DragStartEvent) {
-		const { active } = event;
-		setActiveId(active.id as string);
-	}
 
 	const handleDragEnd = (event: DragEndEvent) =>
 		startTransition(async () => {
-			const { active, over } = event;
-			if (active.id !== over?.id) {
-				const oldIndex = items.findIndex((x) => x.id === active.id);
-				const newIndex = items.findIndex((x) => x.id === over?.id);
+			const { source, target } = event.operation;
+			if (event.canceled || !source || !target || source.id === target.id)
+				return;
 
-				let order;
-				if (newIndex === 0) {
-					const next = items[newIndex];
-					order = LexoRank.parse(next.order).genPrev();
-				} else if (newIndex === items.length - 1) {
-					const prev = items[newIndex];
-					order = LexoRank.parse(prev.order).genNext();
-				} else {
-					const prev = items[newIndex];
-					const offset = oldIndex > newIndex ? -1 : 1;
-					const next = items[newIndex + offset];
-					order = LexoRank.parse(next.order).between(
-						LexoRank.parse(prev.order),
-					);
-				}
+			const oldIndex = items.findIndex((x) => x.id === source.id);
+			const newIndex = items.findIndex((x) => x.id === target.id);
+			if (oldIndex === -1 || newIndex === -1) return;
 
-				updateOrder({ idx: oldIndex, order: order.toString() });
-				await changeEssentialProvisionOrder(
-					items[oldIndex].id,
-					order.toString(),
-				);
+			let order;
+			if (newIndex === 0) {
+				const next = items[newIndex];
+				order = LexoRank.parse(next.order).genPrev();
+			} else if (newIndex === items.length - 1) {
+				const prev = items[newIndex];
+				order = LexoRank.parse(prev.order).genNext();
+			} else {
+				const prev = items[newIndex];
+				const offset = oldIndex > newIndex ? -1 : 1;
+				const next = items[newIndex + offset];
+				order = LexoRank.parse(next.order).between(LexoRank.parse(prev.order));
 			}
 
-			setActiveId(null);
+			updateOrder({ idx: oldIndex, order: order.toString() });
+			await changeEssentialProvisionOrder(items[oldIndex].id, order.toString());
 		});
 
 	return (
@@ -147,33 +114,15 @@ function EssentialCategoryCard({
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="flex flex-col">
-				<DndContext
-					sensors={sensors}
-					collisionDetection={closestCenter}
-					onDragStart={handleDragStart}
-					onDragEnd={handleDragEnd}
-				>
-					<SortableContext items={items}>
-						{items.map((provision, i) => (
-							<SortableEssentialProvision
-								key={provision.id}
-								provision={provision}
-							/>
-						))}
-					</SortableContext>
-					<DragOverlay modifiers={[restrictToWindowEdges]}>
-						{activeId ? (
-							<EssentialProvisionItem
-								provision={
-									provisions.find(
-										(l) => l.id === activeId,
-									) as EssentialProvision & { essential: Essential }
-								}
-								overlay={true}
-							/>
-						) : null}
-					</DragOverlay>
-				</DndContext>
+				<DragDropProvider onDragEnd={handleDragEnd}>
+					{items.map((provision, index) => (
+						<SortableEssentialProvision
+							key={provision.id}
+							provision={provision}
+							index={index}
+						/>
+					))}
+				</DragDropProvider>
 			</CardContent>
 		</Card>
 	);
@@ -181,29 +130,21 @@ function EssentialCategoryCard({
 
 function SortableEssentialProvision({
 	provision,
+	index,
 }: {
 	provision: EssentialProvision & { essential: Essential };
+	index: number;
 }) {
-	const {
-		isDragging,
-		attributes,
-		listeners,
-		setNodeRef,
-		transform,
-		transition,
-	} = useSortable({ id: provision.id });
+	const { ref, handleRef, isDragging } = useSortable({
+		id: provision.id,
+		index,
+	});
 
-	const style = {
-		transform: CSS.Transform.toString(transform),
-		transition,
-	};
 	return (
 		<EssentialProvisionItem
 			provision={provision}
-			style={style}
-			setNodeRef={setNodeRef}
-			attributes={attributes}
-			listeners={listeners}
+			setNodeRef={ref}
+			handleRef={handleRef}
 			isDragging={isDragging}
 		/>
 	);
@@ -211,34 +152,31 @@ function SortableEssentialProvision({
 
 function EssentialProvisionItem({
 	provision,
-	style,
 	setNodeRef,
-	attributes,
-	listeners,
+	handleRef,
 	isDragging = false,
 	overlay = false,
 }: {
 	provision: EssentialProvision & { essential: Essential };
-	style?: CSSProperties;
 	setNodeRef?: (node: HTMLElement | null) => void;
-	attributes?: DraggableAttributes;
-	listeners?: SyntheticListenerMap;
+	handleRef?: (node: Element | null) => void;
 	isDragging?: boolean;
 	overlay?: boolean;
 }) {
 	return (
 		<div
 			key={provision.id}
-			style={style}
 			ref={setNodeRef}
 			className={cn(
-				'flex cursor-default touch-none select-none items-center justify-between gap-2 rounded-lg bg-white py-1',
+				'flex cursor-default items-center justify-between gap-2 rounded-lg bg-white py-1 select-none',
 				isDragging && 'opacity-50',
 				overlay && 'shadow-lg',
 			)}
-			{...attributes}
 		>
-			<Menu {...listeners} className="cursor-grab text-neutral-400" />
+			<Menu
+				ref={handleRef}
+				className="cursor-grab touch-none text-neutral-400"
+			/>
 			<p className="flex-1 text-base">{provision.essential.name}</p>
 			<EssentialProvisionDelete provisionId={provision.id} />
 		</div>

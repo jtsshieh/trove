@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Luggage } from '@prisma/client';
+import type { Luggage } from '@/generated/prisma/client';
 import { Pencil, Plus, Trash } from 'lucide-react';
 import React, { FormEvent, useEffect, useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
@@ -55,11 +55,13 @@ export function CreateLuggageDialog() {
 				}
 			}}
 		>
-			<DialogTrigger asChild>
-				<Button size="icon" className="gap-1 sm:w-auto sm:px-4 sm:py-2">
-					<Plus />
-					<span className="hidden sm:block">Add Luggage</span>
-				</Button>
+			<DialogTrigger
+				render={
+					<Button size="icon" className="gap-1 sm:w-auto sm:px-4 sm:py-2" />
+				}
+			>
+				<Plus />
+				<span className="hidden sm:block">Add Luggage</span>
 			</DialogTrigger>
 			<DialogContent>
 				<Form {...form}>
@@ -139,10 +141,10 @@ export function EditLuggageDialog({
 				}
 			}}
 		>
-			<DialogTrigger asChild>
-				<Button size="icon" variant="secondary" disabled={disabled}>
-					<Pencil />
-				</Button>
+			<DialogTrigger
+				render={<Button size="icon" variant="secondary" disabled={disabled} />}
+			>
+				<Pencil />
 			</DialogTrigger>
 			<DialogContent>
 				<Form {...form}>
@@ -197,36 +199,36 @@ export function DeleteLuggageDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>
-				<Button size="icon" variant="destructive" disabled={disabled}>
-					<Trash />
-				</Button>
+			<DialogTrigger
+				render={
+					<Button size="icon" variant="destructive" disabled={disabled} />
+				}
+			>
+				<Trash />
 			</DialogTrigger>
-			<DialogContent asChild>
-				<form onSubmit={onSubmit}>
-					<DialogHeader>
-						<DialogTitle>Delete Luggage</DialogTitle>
-						<DialogDescription>
-							Are you sure you want to delete {luggage.name}? This action is
-							irreversible.
-						</DialogDescription>
-					</DialogHeader>
-					<DialogFooter>
-						<Button
-							onClick={(e) => {
-								e.preventDefault();
-								setOpen(false);
-							}}
-							variant="secondary"
-							disabled={isPending}
-						>
-							Cancel
-						</Button>
-						<Button type="submit" loading={isPending}>
-							Delete
-						</Button>
-					</DialogFooter>
-				</form>
+			<DialogContent render={<form onSubmit={onSubmit} />}>
+				<DialogHeader>
+					<DialogTitle>Delete Luggage</DialogTitle>
+					<DialogDescription>
+						Are you sure you want to delete {luggage.name}? This action is
+						irreversible.
+					</DialogDescription>
+				</DialogHeader>
+				<DialogFooter>
+					<Button
+						onClick={(e) => {
+							e.preventDefault();
+							setOpen(false);
+						}}
+						variant="secondary"
+						disabled={isPending}
+					>
+						Cancel
+					</Button>
+					<Button type="submit" loading={isPending}>
+						Delete
+					</Button>
+				</DialogFooter>
 			</DialogContent>
 		</Dialog>
 	);

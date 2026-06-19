@@ -10,7 +10,7 @@ import { createLuggageProvisionSchema } from './schemas';
 
 export const createLuggageProvision = tripClient
 	.metadata({ actionName: 'createLuggageProvision' })
-	.schema(createLuggageProvisionSchema)
+	.inputSchema(createLuggageProvisionSchema)
 	.bindArgsSchemas<[tripId: z.ZodString]>([z.string()])
 	.action(
 		async ({

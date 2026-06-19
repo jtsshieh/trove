@@ -1,12 +1,12 @@
-import {
+import type {
 	Clothing,
 	ClothingProvision,
 	Container,
 	ContainerProvision,
-	ContainerType,
 	Essential,
 	EssentialProvision,
-} from '@prisma/client';
+} from '@/generated/prisma/client';
+import { ContainerType } from '@/generated/prisma/enums';
 import React from 'react';
 
 import { EmptyList } from '../../../../../../components/empty-list';

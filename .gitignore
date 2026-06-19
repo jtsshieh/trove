@@ -35,6 +35,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# prisma (generated client)
+/src/generated
+
 .env
 
 certificates
+# e2e test artifacts
+/e2e/*.png

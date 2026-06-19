@@ -19,14 +19,15 @@ export function PackingGearNav() {
 					key={name}
 					variant="secondary"
 					size="flexible"
-					asChild
 					className={cn(
 						'bg-transparent px-3 py-1.5 text-sm font-medium hover:bg-white',
 						[href, href.replace('/', '')].includes(pathname.split('/')[3]) &&
 							'bg-white',
 					)}
+					nativeButton={false}
+					render={<Link href={`/dashboard/packing-gear${href}`} />}
 				>
-					<Link href={`/dashboard/packing-gear${href}`}>{name}</Link>
+					{name}
 				</Button>
 			))}
 		</div>

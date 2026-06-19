@@ -54,17 +54,16 @@ export function DashboardNav({ user }: { user: UserDTO }) {
 					<Button
 						key={name}
 						variant="ghost"
-						asChild
 						className={cn(
 							'flex justify-start gap-2',
 							[href, href.replace('/', '')].includes(
 								pathname.split('/')[2] ?? '',
 							) && 'bg-neutral-100',
 						)}
+						nativeButton={false}
+						render={<Link href={`/dashboard${href}`} />}
 					>
-						<Link href={`/dashboard${href}`}>
-							{icon} {name}
-						</Link>
+						{icon} {name}
 					</Button>
 				))}
 			</div>
@@ -81,12 +80,11 @@ export function DashboardNav({ user }: { user: UserDTO }) {
 						'flex justify-start gap-2',
 						(pathname.split('/')[2] ?? '') === '/account' && 'bg-neutral-100',
 					)}
-					asChild
+					nativeButton={false}
+					render={<Link href="/dashboard/account" />}
 				>
-					<Link href="/dashboard/account">
-						<Settings />
-						Settings
-					</Link>
+					<Settings />
+					Settings
 				</Button>
 				<Button
 					variant="ghost"
@@ -98,19 +96,23 @@ export function DashboardNav({ user }: { user: UserDTO }) {
 				</Button>
 			</div>
 			<DropdownMenu>
-				<DropdownMenuTrigger asChild>
-					<Avatar className="hidden cursor-pointer select-none sm:block">
-						<AvatarFallback>:)</AvatarFallback>
-					</Avatar>
+				<DropdownMenuTrigger
+					render={
+						<Avatar className="hidden cursor-pointer select-none sm:block" />
+					}
+				>
+					<AvatarFallback>:)</AvatarFallback>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
 					<DropdownMenuLabel>{user.username}</DropdownMenuLabel>
 					<DropdownMenuSeparator />
-					<DropdownMenuItem asChild className="flex gap-2">
-						<Link href="/dashboard/account">
-							<Settings />
-							Settings
-						</Link>
+					<DropdownMenuItem
+						className="flex gap-2"
+						nativeButton={false}
+						render={<Link href="/dashboard/account" />}
+					>
+						<Settings />
+						Settings
 					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem className="flex gap-2" onClick={() => signOut()}>
@@ -132,13 +134,11 @@ export function MobileDashboardNav({ user }: { user: UserDTO }) {
 	}, [pathname]);
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetTrigger asChild>
-				<Button variant="outline" size="icon">
-					<Menu />
-				</Button>
+			<SheetTrigger render={<Button variant="outline" size="icon" />}>
+				<Menu />
 			</SheetTrigger>
 			<SheetContent side="top" className="h-full p-0">
-				<SheetClose className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:pointer-events-none">
+				<SheetClose className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-none disabled:pointer-events-none">
 					<X className="h-4 w-4" />
 					<span className="sr-only">Close</span>
 				</SheetClose>

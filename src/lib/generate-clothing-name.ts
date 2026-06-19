@@ -1,4 +1,4 @@
-import { Clothing } from '@prisma/client';
+import type { Clothing } from '@/generated/prisma/client';
 
 export function generateClothingName({
 	color,

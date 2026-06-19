@@ -1,4 +1,5 @@
-import { Clothing, ClothingCategory, ClothingProvision } from '@prisma/client';
+import type { Clothing, ClothingProvision } from '@/generated/prisma/client';
+import { ClothingCategory } from '@/generated/prisma/enums';
 import { eachDayOfInterval } from 'date-fns';
 import { Shirt } from 'lucide-react';
 import { notFound } from 'next/navigation';
@@ -12,28 +13,26 @@ import { getTripWithClothingProvisions } from './_data/fetchers';
 import { ClothingProvisionList } from './clothing-provision-list';
 import { CreateClothingProvisionDialog } from './create-clothing-provision-dialog';
 
-export default async function ClothingProvisionsPage(
-    props: {
-        params: Promise<{ tripId: string }>;
-    }
-) {
-    const params = await props.params;
-    const trip = await getTripWithClothingProvisions(params.tripId);
+export default async function ClothingProvisionsPage(props: {
+	params: Promise<{ tripId: string }>;
+}) {
+	const params = await props.params;
+	const trip = await getTripWithClothingProvisions(params.tripId);
 
-    if (!trip) return notFound();
+	if (!trip) return notFound();
 
-    const clothes = await getAllClothes();
-    const types = await getAllClothingTypes();
-    const usedClothes = trip.clothingProvisions.map(
+	const clothes = await getAllClothes();
+	const types = await getAllClothingTypes();
+	const usedClothes = trip.clothingProvisions.map(
 		(provision) => provision.clothing.id,
 	);
 
-    const groups: Record<
+	const groups: Record<
 		string,
 		Record<ClothingCategory, (ClothingProvision & { clothing: Clothing })[]>
 	> = {};
 
-    for (const day of eachDayOfInterval({ start: trip.start, end: trip.end })) {
+	for (const day of eachDayOfInterval({ start: trip.start, end: trip.end })) {
 		groups[day.toISOString()] = {
 			[ClothingCategory.Top]: [],
 			[ClothingCategory.Bottom]: [],
@@ -41,13 +40,13 @@ export default async function ClothingProvisionsPage(
 		};
 	}
 
-    trip.clothingProvisions.forEach((provision) => {
+	trip.clothingProvisions.forEach((provision) => {
 		groups[provision.day.toISOString()][provision.clothing.type.category].push(
 			provision,
 		);
 	});
 
-    return (
+	return (
 		<>
 			<div className="sticky -top-6 mb-4 flex items-center gap-4 rounded-xl bg-neutral-200/75 p-2 backdrop-blur">
 				<Shirt className="h-10 w-10" />

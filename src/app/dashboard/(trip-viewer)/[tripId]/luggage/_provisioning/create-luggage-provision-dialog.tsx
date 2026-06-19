@@ -1,7 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Luggage, Trip } from '@prisma/client';
+import type { Luggage, Trip } from '@/generated/prisma/client';
 import { ChevronsUpDown, Plus } from 'lucide-react';
 import React, { useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
@@ -79,11 +79,13 @@ export function CreateLuggageProvisionDialog({
 				}
 			}}
 		>
-			<DialogTrigger asChild>
-				<Button size="icon" className="gap-1 md:w-auto md:px-4 md:py-2">
-					<Plus />
-					<span className="hidden md:block">Add Luggage</span>
-				</Button>
+			<DialogTrigger
+				render={
+					<Button size="icon" className="gap-1 md:w-auto md:px-4 md:py-2" />
+				}
+			>
+				<Plus />
+				<span className="hidden md:block">Add Luggage</span>
 			</DialogTrigger>
 			<DialogContent>
 				<Form {...form}>
@@ -98,23 +100,21 @@ export function CreateLuggageProvisionDialog({
 								<FormItem className="flex flex-col">
 									<FormLabel>Luggage</FormLabel>
 									<Popover open={comboOpen} onOpenChange={setComboOpen}>
-										<PopoverTrigger asChild>
-											<FormControl>
-												<Button
-													disabled={isPending}
-													variant="outline"
-													role="combobox"
-													className={cn(
-														'flex justify-between',
-														!field.value && 'text-neutral-600',
-													)}
-												>
-													{field.value
-														? luggage.find((a) => a.id === field.value)?.name
-														: "Select the luggage you'd like to add"}
-													<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-												</Button>
-											</FormControl>
+										<PopoverTrigger render={<FormControl />}>
+											<Button
+												disabled={isPending}
+												variant="outline"
+												role="combobox"
+												className={cn(
+													'flex justify-between',
+													!field.value && 'text-neutral-600',
+												)}
+											>
+												{field.value
+													? luggage.find((a) => a.id === field.value)?.name
+													: "Select the luggage you'd like to add"}
+												<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+											</Button>
 										</PopoverTrigger>
 										<PopoverContent
 											className="w-[--radix-popover-trigger-width] p-0"

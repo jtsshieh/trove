@@ -5,7 +5,6 @@ import { TripMode } from '@/generated/prisma/enums';
 import { format } from 'date-fns';
 import {
 	Box,
-	ChevronLeft,
 	Home,
 	Kanban,
 	Luggage,
@@ -281,7 +280,7 @@ function TripModeSelector({
 				<SelectTrigger
 					aria-label={`Trip mode: ${meta.label}`}
 					title={meta.label}
-					className="size-9 self-center justify-center gap-0 px-0 [&>svg:last-of-type]:hidden"
+					className="size-7 self-center justify-center gap-0 rounded-[min(var(--radius-md),12px)] border-transparent bg-transparent px-0 shadow-none hover:bg-muted hover:text-foreground [&>svg:last-of-type]:hidden"
 				>
 					<Icon className="size-4" />
 				</SelectTrigger>

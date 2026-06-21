@@ -11,8 +11,8 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
-	title: 'Packing List Helper',
-	description: 'Plan, provision, and pack for your trips.',
+	title: 'Closet Manager',
+	description: 'Manage your closet, build outfits, and pack for your trips.',
 };
 
 export default function RootLayout({

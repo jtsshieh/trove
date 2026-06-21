@@ -2,6 +2,6 @@
 // local dev defaults to localhost; production sets RP_ID/ORIGIN for the deployed
 // origin (e.g. closet.local). rpID is the registrable domain (no scheme/port);
 // origin is the exact scheme+host(+port) the browser sees.
-export const rpName = process.env.RP_NAME ?? 'Packing List Helper';
+export const rpName = process.env.RP_NAME ?? 'Closet Manager';
 export const rpID = process.env.RP_ID ?? 'localhost';
 export const origin = process.env.ORIGIN ?? 'http://localhost:3000';

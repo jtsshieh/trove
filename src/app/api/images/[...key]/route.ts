@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { getCurrentUser } from '@/app/dashboard/(main)/account/_data/fetchers';
+import { getCurrentUser } from '@/app/(app)/account/_data/fetchers';
 import { getObject, keyOwner } from '@/lib/storage.server';
 
 /** Streams a stored image, but only to the user who owns it (owner is in the key). */

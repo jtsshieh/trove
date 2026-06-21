@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-import { editClothingSchema } from '@/app/dashboard/(main)/wardrobe/_data/schemas';
-import * as service from '@/app/dashboard/(main)/wardrobe/_data/service';
+import { editClothingSchema } from '@/app/(app)/closet/clothing/_data/schemas';
+import * as service from '@/app/(app)/closet/clothing/_data/service';
 import { authedRoute } from '@/lib/api/http';
 
 const paramsSchema = z.object({ id: z.string() });

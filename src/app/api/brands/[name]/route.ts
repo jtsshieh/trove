@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-import { editBrandSchema } from '@/app/dashboard/(main)/wardrobe/brands/_data/schemas';
-import * as service from '@/app/dashboard/(main)/wardrobe/brands/_data/service';
+import { editBrandSchema } from '@/app/(app)/closet/clothing/brands/_data/schemas';
+import * as service from '@/app/(app)/closet/clothing/brands/_data/service';
 import { authedRoute } from '@/lib/api/http';
 
 const paramsSchema = z.object({ name: z.string() });

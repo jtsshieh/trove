@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { getLuggagePackingBoard } from '@/app/dashboard/(trip-viewer)/[tripId]/luggage/_packing/_data/fetchers';
+import { getLuggagePackingBoard } from '@/app/(app)/trip-planner/[tripId]/luggage/_packing/_data/fetchers';
 import { ApiError } from '@/lib/api/errors';
 import { authedRoute } from '@/lib/api/http';
 import { requireTrip } from '@/lib/api/ownership';

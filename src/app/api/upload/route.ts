@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import sharp from 'sharp';
 
-import { getCurrentUser } from '@/app/dashboard/(main)/account/_data/fetchers';
+import { getCurrentUser } from '@/app/(app)/account/_data/fetchers';
 import { buildImageKey, putObject } from '@/lib/storage.server';
 
 // Generous cap: a background-removed cutout is a full-res RGBA PNG and can be far

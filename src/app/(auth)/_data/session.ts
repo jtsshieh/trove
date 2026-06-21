@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { randomBytes } from 'node:crypto';
 
-import { redis } from '../../../lib/db.server';
+import { redis } from '@/lib/db.server';
 
 export async function createChallengeSession(challenge: string) {
 	const cookieStore = await cookies();

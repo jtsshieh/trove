@@ -1,5 +1,5 @@
-import { scanLuggageImageSchema } from '@/app/dashboard/(main)/packing-gear/luggage/_data/schemas';
-import * as service from '@/app/dashboard/(main)/packing-gear/luggage/_data/service';
+import { scanLuggageImageSchema } from '@/app/(app)/closet/packing-gear/luggage/_data/schemas';
+import * as service from '@/app/(app)/closet/packing-gear/luggage/_data/service';
 import { authedRoute } from '@/lib/api/http';
 
 export const POST = authedRoute({

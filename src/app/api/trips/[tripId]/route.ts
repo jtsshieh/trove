@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-import { editTripSchema } from '@/app/dashboard/(trip-viewer)/[tripId]/_data/schemas';
-import * as service from '@/app/dashboard/(trip-viewer)/[tripId]/_data/service';
+import { editTripSchema } from '@/app/(app)/trip-planner/[tripId]/_data/schemas';
+import * as service from '@/app/(app)/trip-planner/[tripId]/_data/service';
 import { authedRoute } from '@/lib/api/http';
 
 const paramsSchema = z.object({ tripId: z.string() });

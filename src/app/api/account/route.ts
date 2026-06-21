@@ -1,4 +1,4 @@
-import * as service from '@/app/dashboard/(main)/account/_data/service';
+import * as service from '@/app/(app)/account/_data/service';
 import { authedRoute } from '@/lib/api/http';
 
 export const DELETE = authedRoute({

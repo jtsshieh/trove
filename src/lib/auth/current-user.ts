@@ -60,3 +60,13 @@ export function isAdmin(user: UserDTO): boolean {
 export function requireAdmin(user: UserDTO): void {
 	if (!isAdmin(user)) throw new ApiError(403, 'Forbidden');
 }
+
+/**
+ * Page/layout guard: redirect non-admins to the launcher (a thrown ApiError would
+ * render an error boundary, not a redirect). Returns the admin user.
+ */
+export async function requireAdminPage(): Promise<UserDTO> {
+	const user = await getCurrentUserSafe();
+	if (!isAdmin(user)) redirect('/');
+	return user;
+}

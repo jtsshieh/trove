@@ -19,12 +19,6 @@ export const passwordSignInSchema = z.object({
 	password: z.string(),
 });
 
-/** Sign-up: create the account, then sign in. */
-export const signUpSchema = z.object({
-	username: z.string(),
-	password: z.string(),
-});
-
 /**
  * The opaque @simplewebauthn JSON blobs. They're validated by @simplewebauthn's
  * own verify calls (against the redis challenge), so here we just confirm they're

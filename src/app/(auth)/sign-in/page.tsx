@@ -8,13 +8,12 @@ import {
 } from '@simplewebauthn/browser';
 import { PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/types';
 import { AlertCircle } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState, useTransition } from 'react';
 import { z } from 'zod';
 
-import { Alert, AlertDescription } from '../../../components/ui/alert';
-import { Button } from '../../../components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import {
 	Card,
 	CardContent,
@@ -22,7 +21,7 @@ import {
 	CardFooter,
 	CardHeader,
 	CardTitle,
-} from '../../../components/ui/card';
+} from '@/components/ui/card';
 import {
 	Form,
 	FormControl,
@@ -31,9 +30,9 @@ import {
 	FormLabel,
 	FormMessage,
 	useAppForm,
-} from '../../../components/ui/form';
-import { Input } from '../../../components/ui/input';
-import { Label } from '../../../components/ui/label';
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
 	getAuthOptions,
 	getPasskeyOptions,
@@ -73,9 +72,7 @@ export default function SigninPage() {
 			const result = await getAuthOptions(data.username);
 
 			if (result.type === 'failure')
-				setError(
-					"There is no associated account with this username. Sign up if you don't have an account yet.",
-				);
+				setError('There is no account with this username.');
 
 			if (result.type === 'password') setType('password');
 
@@ -112,7 +109,7 @@ export default function SigninPage() {
 			authenticationResponse,
 		);
 		if (verificationResponse.type === 'success') {
-			router.push('/dashboard');
+			router.push('/');
 		} else {
 			if (verificationResponse.code === 'INVALID_PASSKEY') {
 				setError("Your passkey couldn't be verified.");
@@ -126,11 +123,6 @@ export default function SigninPage() {
 
 	return (
 		<div className="flex h-svh w-screen items-center justify-center">
-			<div className="absolute top-0 flex w-full justify-end p-8">
-				<Button variant="secondary">
-					<Link href="/sign-up">Sign up</Link>
-				</Button>
-			</div>
 			{type === 'password' ? (
 				<PasswordForm username={form.getValues().username} />
 			) : type === 'passkey' ? (
@@ -255,7 +247,7 @@ function PasswordForm({ username }: { username: string }) {
 		startTransition(async () => {
 			const result = await signInWithPassword(username, data.password);
 			if (result.success) {
-				router.push('/dashboard');
+				router.push('/');
 			} else {
 				setError(true);
 			}

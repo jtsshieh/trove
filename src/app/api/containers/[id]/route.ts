@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-import { editContainerSchema } from '@/app/dashboard/(main)/packing-gear/containers/_data/schemas';
-import * as service from '@/app/dashboard/(main)/packing-gear/containers/_data/service';
+import { editContainerSchema } from '@/app/(app)/closet/packing-gear/containers/_data/schemas';
+import * as service from '@/app/(app)/closet/packing-gear/containers/_data/service';
 import { authedRoute } from '@/lib/api/http';
 
 const paramsSchema = z.object({ id: z.string() });

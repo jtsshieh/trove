@@ -31,10 +31,5 @@ export const verifyAuthentication = (
 		authenticationResponse,
 	});
 
-export const signUp = (username: string, password: string) =>
-	api.post<{ success: boolean; message?: string }>('/api/auth/sign-up', {
-		username,
-		password,
-	});
-
-export const signOut = () => api.post<{ success: boolean }>('/api/auth/sign-out');
+export const signOut = () =>
+	api.post<{ success: boolean }>('/api/auth/sign-out');

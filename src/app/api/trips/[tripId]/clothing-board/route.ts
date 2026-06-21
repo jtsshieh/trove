@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { getClothingBoardData } from '@/app/dashboard/(trip-viewer)/[tripId]/clothing/_data/fetchers';
+import { getClothingBoardData } from '@/app/(app)/trip-planner/[tripId]/clothing/_data/fetchers';
 import { ApiError } from '@/lib/api/errors';
 import { authedRoute } from '@/lib/api/http';
 import { requireTrip } from '@/lib/api/ownership';

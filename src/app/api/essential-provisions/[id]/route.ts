@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import * as service from '@/app/dashboard/(trip-viewer)/[tripId]/essentials/_data/service';
+import * as service from '@/app/(app)/trip-planner/[tripId]/essentials/_data/service';
 import { authedRoute } from '@/lib/api/http';
 
 const paramsSchema = z.object({ id: z.string() });

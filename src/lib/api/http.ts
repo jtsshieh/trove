@@ -5,7 +5,7 @@ import { z, ZodError, type ZodType } from 'zod';
 import {
 	getCurrentUser,
 	type UserDTO,
-} from '@/app/dashboard/(main)/account/_data/fetchers';
+} from '@/app/(app)/account/_data/fetchers';
 
 import { ApiError } from './errors';
 

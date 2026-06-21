@@ -1,6 +1,6 @@
-import { getAllContainers } from '@/app/dashboard/(main)/packing-gear/containers/_data/fetchers';
-import { createContainerSchema } from '@/app/dashboard/(main)/packing-gear/containers/_data/schemas';
-import * as service from '@/app/dashboard/(main)/packing-gear/containers/_data/service';
+import { getAllContainers } from '@/app/(app)/closet/packing-gear/containers/_data/fetchers';
+import { createContainerSchema } from '@/app/(app)/closet/packing-gear/containers/_data/schemas';
+import * as service from '@/app/(app)/closet/packing-gear/containers/_data/service';
 import { authedRoute } from '@/lib/api/http';
 
 export const GET = authedRoute({

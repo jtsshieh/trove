@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-import { editEssentialGroupSchema } from '@/app/dashboard/(main)/essentials/_data/schemas';
-import * as service from '@/app/dashboard/(main)/essentials/_data/service';
+import { editEssentialGroupSchema } from '@/app/(app)/closet/essentials/_data/schemas';
+import * as service from '@/app/(app)/closet/essentials/_data/service';
 import { authedRoute } from '@/lib/api/http';
 
 const paramsSchema = z.object({ id: z.string() });

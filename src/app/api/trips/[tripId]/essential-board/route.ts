@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { getEssentialsBoardData } from '@/app/dashboard/(trip-viewer)/[tripId]/essentials/_data/fetchers';
+import { getEssentialsBoardData } from '@/app/(app)/trip-planner/[tripId]/essentials/_data/fetchers';
 import { ApiError } from '@/lib/api/errors';
 import { authedRoute } from '@/lib/api/http';
 import { requireTrip } from '@/lib/api/ownership';

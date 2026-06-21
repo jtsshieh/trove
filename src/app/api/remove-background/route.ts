@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { getCurrentUser } from '@/app/dashboard/(main)/account/_data/fetchers';
+import { getCurrentUser } from '@/app/(app)/account/_data/fetchers';
 import { removeBackground } from '@/lib/background-removal.server';
 
 // CPU inference can take a while, especially on the first (cold) request.

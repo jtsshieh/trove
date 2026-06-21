@@ -10,7 +10,7 @@ import {
 	type ReactNode,
 } from 'react';
 
-import { updateUserSettings } from '@/app/dashboard/(main)/account/_data/api';
+import { updateUserSettings } from '@/app/(app)/account/_data/api';
 import { DisplayMode } from '@/generated/prisma/enums';
 
 import { Segmented } from './segmented';

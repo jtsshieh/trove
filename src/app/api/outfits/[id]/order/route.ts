@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-import { changeOutfitOrderSchema } from '@/app/dashboard/(main)/outfits/_data/schemas';
-import * as service from '@/app/dashboard/(main)/outfits/_data/service';
+import { changeOutfitOrderSchema } from '@/app/(app)/outfits/_data/schemas';
+import * as service from '@/app/(app)/outfits/_data/service';
 import { authedRoute } from '@/lib/api/http';
 
 const paramsSchema = z.object({ id: z.string() });

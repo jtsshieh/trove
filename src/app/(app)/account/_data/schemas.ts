@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
-import { DisplayMode, PieceSize, ProvisionView } from '@/generated/prisma/enums';
+import {
+	DisplayMode,
+	PieceSize,
+	ProvisionView,
+} from '@/generated/prisma/enums';
 
 export const updateUserSettingsSchema = z.object({
 	displayMode: z.nativeEnum(DisplayMode).optional(),

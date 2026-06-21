@@ -2,13 +2,13 @@ import React from 'react';
 
 import { AccountMenu } from '@/components/app-shell/account-menu';
 import { AppTiles } from '@/components/app-shell/app-tiles';
-import { APPS } from '@/lib/apps';
+import { LAUNCHER_APPS } from '@/lib/apps';
 import { getCurrentUserSafe, isAdmin } from '@/lib/auth';
 
 export default async function LauncherPage() {
 	const user = await getCurrentUserSafe();
 	const admin = isAdmin(user);
-	const apps = APPS.filter((a) => !a.adminOnly || admin);
+	const apps = LAUNCHER_APPS.filter((a) => !a.adminOnly || admin);
 
 	return (
 		<div className="flex h-svh w-full flex-col">

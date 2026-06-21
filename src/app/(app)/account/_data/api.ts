@@ -18,6 +18,11 @@ export const changeUsername = (username: string) =>
 
 export const deleteUser = () => api.del<{ success: boolean }>('/api/account');
 
+export const changePassword = (input: {
+	currentPassword: string;
+	newPassword: string;
+}) => api.patch<{ success: boolean }>('/api/account/password', input);
+
 export const updateUserSettings = (input: UpdateUserSettingsInput) =>
 	api.patch<{ type: 'success'; message: string }>('/api/settings', input);
 

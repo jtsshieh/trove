@@ -7,7 +7,7 @@ export default async function OutfitsLayout({ children }: PropsWithChildren) {
 	const user = await getCurrentUserSafe();
 	return (
 		<AppShell
-			appName="Outfits"
+			appId="outfits"
 			username={user.username}
 			isAdmin={isAdmin(user)}
 			sections={[]}

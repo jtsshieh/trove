@@ -7,7 +7,7 @@ export default async function AccountLayout({ children }: PropsWithChildren) {
 	const user = await getCurrentUserSafe();
 	return (
 		<AppShell
-			appName="Account"
+			appId="account"
 			username={user.username}
 			isAdmin={isAdmin(user)}
 			sections={[]}

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import React from 'react';
 
-import type { AppDef } from '@/lib/apps';
+import { accentStyle, type AppDef } from '@/lib/apps';
 import { cn } from '@/lib/utils';
 
 /** iOS-style app icons: a rounded tile + small label, used by the launcher and the
@@ -45,6 +45,7 @@ export function AppTiles({
 					className={cn('group flex flex-col items-center gap-2', s.w)}
 				>
 					<div
+						style={accentStyle(app.accent)}
 						className={cn(
 							'bg-brand-subtle text-brand ring-foreground/5 flex items-center justify-center shadow-sm ring-1 transition group-hover:scale-105 group-active:scale-95',
 							s.tile,

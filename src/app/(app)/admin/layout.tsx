@@ -8,7 +8,7 @@ export default async function AdminLayout({ children }: PropsWithChildren) {
 	const user = await requireAdminPage();
 	return (
 		<AppShell
-			appName="Admin"
+			appId="admin"
 			username={user.username}
 			isAdmin
 			sections={[

@@ -8,7 +8,7 @@ export default async function ClosetLayout({ children }: PropsWithChildren) {
 	const user = await getCurrentUserSafe();
 	return (
 		<AppShell
-			appName="Closet"
+			appId="closet"
 			username={user.username}
 			isAdmin={isAdmin(user)}
 			sections={[

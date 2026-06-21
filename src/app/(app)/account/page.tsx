@@ -1,7 +1,11 @@
 import React from 'react';
 
 import { getCurrentUserSafe } from './_data/fetchers';
-import { DeleteAccountCard, UsernameCard } from './account-settings-cards';
+import {
+	DeleteAccountCard,
+	PasswordCard,
+	UsernameCard,
+} from './account-settings-cards';
 import { AuthCard } from './auth-card';
 
 export default async function UserSettingsPage() {
@@ -15,6 +19,7 @@ export default async function UserSettingsPage() {
 				</div>
 				<div className="flex w-full flex-col gap-4">
 					<UsernameCard user={user} />
+					<PasswordCard />
 					<AuthCard />
 					<DeleteAccountCard />
 				</div>

@@ -22,9 +22,11 @@ import {
 	DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ApiError } from '@/lib/api/errors';
 import { toast } from 'sonner';
 
-import { changeUsername, deleteUser } from './_data/api';
+import { changePassword, changeUsername, deleteUser } from './_data/api';
 import type { UserDTO } from './_data/fetchers';
 
 export function UsernameCard({ user }: { user: UserDTO }) {
@@ -66,6 +68,89 @@ export function UsernameCard({ user }: { user: UserDTO }) {
 			<CardFooter className="flex justify-end bg-neutral-100 py-4">
 				<Button onClick={onSaveUsernameChange} loading={isPending}>
 					Save
+				</Button>
+			</CardFooter>
+		</Card>
+	);
+}
+
+export function PasswordCard() {
+	const [current, setCurrent] = useState('');
+	const [next, setNext] = useState('');
+	const [confirm, setConfirm] = useState('');
+	const [isPending, startTransition] = useTransition();
+
+	const onSave = () =>
+		startTransition(async () => {
+			if (next.length < 8) {
+				toast.error('New password must be at least 8 characters.');
+				return;
+			}
+			if (next !== confirm) {
+				toast.error('New passwords do not match.');
+				return;
+			}
+			try {
+				await changePassword({ currentPassword: current, newPassword: next });
+				toast.success('Your password has been changed.');
+				setCurrent('');
+				setNext('');
+				setConfirm('');
+			} catch (e) {
+				toast.error(
+					e instanceof ApiError ? e.message : 'Could not change password',
+				);
+			}
+		});
+
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle>Password</CardTitle>
+				<CardDescription>Change your account password.</CardDescription>
+			</CardHeader>
+			<CardContent className="flex max-w-sm flex-col gap-3">
+				<div className="flex flex-col gap-1.5">
+					<Label htmlFor="current-password">Current password</Label>
+					<Input
+						id="current-password"
+						type="password"
+						value={current}
+						onChange={(e) => setCurrent(e.target.value)}
+						disabled={isPending}
+						autoComplete="current-password"
+					/>
+				</div>
+				<div className="flex flex-col gap-1.5">
+					<Label htmlFor="new-password">New password</Label>
+					<Input
+						id="new-password"
+						type="password"
+						value={next}
+						onChange={(e) => setNext(e.target.value)}
+						disabled={isPending}
+						autoComplete="new-password"
+					/>
+				</div>
+				<div className="flex flex-col gap-1.5">
+					<Label htmlFor="confirm-password">Confirm new password</Label>
+					<Input
+						id="confirm-password"
+						type="password"
+						value={confirm}
+						onChange={(e) => setConfirm(e.target.value)}
+						disabled={isPending}
+						autoComplete="new-password"
+					/>
+				</div>
+			</CardContent>
+			<CardFooter className="flex justify-end bg-neutral-100 py-4">
+				<Button
+					onClick={onSave}
+					loading={isPending}
+					disabled={!current || !next}
+				>
+					Change password
 				</Button>
 			</CardFooter>
 		</Card>

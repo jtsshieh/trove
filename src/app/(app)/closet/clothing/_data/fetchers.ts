@@ -16,6 +16,7 @@ export const getAllClothingTypesWithClothes = cache(async () => {
 	const currentUser = await getCurrentUserSafe();
 
 	return prisma.clothingType.findMany({
+		where: { userId: currentUser.id },
 		orderBy: { name: 'asc' },
 		include: {
 			clothes: {
@@ -28,5 +29,9 @@ export const getAllClothingTypesWithClothes = cache(async () => {
 });
 
 export const getAllClothingTypes = cache(async () => {
-	return prisma.clothingType.findMany({ orderBy: { name: 'asc' } });
+	const currentUser = await getCurrentUserSafe();
+	return prisma.clothingType.findMany({
+		where: { userId: currentUser.id },
+		orderBy: { name: 'asc' },
+	});
 });

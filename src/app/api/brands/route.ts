@@ -9,5 +9,5 @@ export const GET = authedRoute({
 
 export const POST = authedRoute({
 	body: createBrandSchema,
-	handler: ({ body }) => service.createBrand(body),
+	handler: ({ user, body }) => service.createBrand(user.id, body),
 });

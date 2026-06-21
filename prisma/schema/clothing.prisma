@@ -7,8 +7,12 @@ enum ClothingCategory {
 model Clothing {
   id String @id @default(cuid()) @map("id")
 
+  // Denormalized display strings kept alongside the id relations so the ~50
+  // display/trip code spots that read `clothing.brandName`/`clothing.typeName`
+  // keep working unchanged.
   brandName String @map("brand_name")
-  brand     Brand  @relation(fields: [brandName], references: [name], onDelete: Cascade)
+  brandId   String @map("brand_id")
+  brand     Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
   brandLine String? @map("brand_line")
   color     String
@@ -20,7 +24,8 @@ model Clothing {
   quantity Int @default(1)
 
   typeName String       @map("type_name")
-  type     ClothingType @relation(fields: [typeName], references: [name])
+  typeId   String       @map("type_id")
+  type     ClothingType @relation(fields: [typeId], references: [id])
 
   imageKey String? @map("image_key")
 
@@ -35,7 +40,7 @@ model Clothing {
   outfitItems        OutfitItem[]
   tripBrings         TripClothingBring[]
 
-  @@unique([brandName, brandLine, color, typeName, modifier])
+  @@unique([userId, brandName, brandLine, color, typeName, modifier])
   @@map("clothes")
 }
 
@@ -58,19 +63,29 @@ model TripClothingBring {
 }
 
 model Brand {
-  name String @id
+  id   String @id @default(cuid())
+  name String
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   clothes Clothing[]
 
+  @@unique([userId, name])
   @@map("brands")
 }
 
 model ClothingType {
-  name String @id
+  id   String @id @default(cuid())
+  name String
 
   category ClothingCategory
 
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   clothes Clothing[]
 
+  @@unique([userId, name])
   @@map("clothing_types")
 }

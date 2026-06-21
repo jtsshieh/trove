@@ -87,7 +87,7 @@ export function ClothingTypesManager({
 			<CardHeader>
 				<CardTitle>Clothing types</CardTitle>
 				<CardDescription>
-					The global catalog of clothing types. Removing a type in use is
+					Your personal catalog of clothing types. Removing a type in use is
 					blocked.
 				</CardDescription>
 			</CardHeader>

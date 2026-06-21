@@ -3,27 +3,42 @@ import { prisma } from '@/lib/db.server';
 
 import type { ClothingTypeInput } from './schemas';
 
-export async function listClothingTypes() {
-	return prisma.clothingType.findMany({ orderBy: { name: 'asc' } });
+/**
+ * Clothing types are per-user — each caller owns their own catalog — so every
+ * function is scoped by the authenticated user's id (threaded from the route).
+ */
+
+export async function listClothingTypes(userId: string) {
+	return prisma.clothingType.findMany({
+		where: { userId },
+		orderBy: { name: 'asc' },
+	});
 }
 
-/** Idempotent create/update of clothing types (used by setup + admin). */
-export async function createClothingTypes(types: ClothingTypeInput[]) {
+/** Idempotent create/update of the user's clothing types (used by setup + closet). */
+export async function createClothingTypes(
+	userId: string,
+	types: ClothingTypeInput[],
+) {
 	for (const t of types) {
 		await prisma.clothingType.upsert({
-			where: { name: t.name },
+			where: { userId_name: { userId, name: t.name } },
 			update: { category: t.category },
-			create: t,
+			create: { ...t, userId },
 		});
 	}
 	return { created: types.length };
 }
 
-/** Delete a clothing type; refuses if any clothing still references it. */
-export async function deleteClothingType(name: string) {
-	const inUse = await prisma.clothing.count({ where: { typeName: name } });
+/** Delete a user's clothing type; refuses if any of their clothing still uses it. */
+export async function deleteClothingType(userId: string, name: string) {
+	const inUse = await prisma.clothing.count({
+		where: { userId, typeName: name },
+	});
 	if (inUse > 0)
 		throw new ApiError(409, `"${name}" is used by ${inUse} item(s)`);
-	await prisma.clothingType.delete({ where: { name } });
+	await prisma.clothingType.delete({
+		where: { userId_name: { userId, name } },
+	});
 	return { success: true };
 }

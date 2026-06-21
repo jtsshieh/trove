@@ -1,4 +1,4 @@
-import { Server, Shirt, Users } from 'lucide-react';
+import { Server, Users } from 'lucide-react';
 import Link from 'next/link';
 import React from 'react';
 
@@ -15,12 +15,6 @@ const SECTIONS = [
 		href: '/admin/users',
 		icon: Users,
 		description: 'Create accounts and manage roles.',
-	},
-	{
-		name: 'Clothing Types',
-		href: '/admin/clothing-types',
-		icon: Shirt,
-		description: 'Curate the clothing-type catalog.',
 	},
 	{
 		name: 'System',

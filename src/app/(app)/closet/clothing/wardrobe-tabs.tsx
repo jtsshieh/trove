@@ -13,10 +13,12 @@ import { ClothesTabActions } from './clothes-tab-actions';
 export function WardrobeTabs({
 	clothes,
 	brands,
+	types,
 	displayMode,
 }: {
 	clothes: ReactNode;
 	brands: ReactNode;
+	types: ReactNode;
 	displayMode: DisplayMode;
 }) {
 	const [tab, setTab] = useState('clothes');
@@ -32,15 +34,16 @@ export function WardrobeTabs({
 					<TabsList>
 						<TabsTrigger value="clothes">Clothes</TabsTrigger>
 						<TabsTrigger value="brands">Brands</TabsTrigger>
+						<TabsTrigger value="types">Types</TabsTrigger>
 					</TabsList>
 					<div className="flex items-center gap-2">
-						{tab === 'clothes' ? (
+						{tab === 'clothes' && (
 							<Suspense fallback={null}>
 								<ClothesTabActions />
 							</Suspense>
-						) : (
-							<CreateBrandDialog />
 						)}
+						{tab === 'brands' && <CreateBrandDialog />}
+						{/* The Types tab carries its own add/remove controls. */}
 					</div>
 				</div>
 				<TabsContent value="clothes" className="mt-4 flex flex-col">
@@ -48,6 +51,9 @@ export function WardrobeTabs({
 				</TabsContent>
 				<TabsContent value="brands" className="mt-4 flex flex-col">
 					{brands}
+				</TabsContent>
+				<TabsContent value="types" className="mt-4 flex flex-col">
+					{types}
 				</TabsContent>
 			</Tabs>
 		</DisplayModeProvider>

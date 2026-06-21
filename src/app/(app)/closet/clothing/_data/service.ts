@@ -19,12 +19,36 @@ import type {
  * the old next-safe-action ownership middleware.
  */
 
-/** A scanned type may be new — connect if it exists, otherwise create with its category. */
-function typeUpsert(type: string, typeCategory?: 'Top' | 'Bottom' | 'Accessory') {
+/**
+ * Connects a piece to its (per-user) brand, creating it if the user doesn't own it
+ * yet. Matched by the `userId_name` composite so two users can own the same brand.
+ */
+function brandConnectOrCreate(userId: string, brand: string) {
 	return {
 		connectOrCreate: {
-			where: { name: type },
-			create: { name: type, category: typeCategory ?? 'Accessory' },
+			where: { userId_name: { userId, name: brand } },
+			create: { name: brand, user: { connect: { id: userId } } },
+		},
+	};
+}
+
+/**
+ * Connects a piece to its (per-user) type, creating it if the user doesn't own it
+ * yet. A scanned type may be new, so its category is set on create.
+ */
+function typeConnectOrCreate(
+	userId: string,
+	type: string,
+	typeCategory?: 'Top' | 'Bottom' | 'Accessory',
+) {
+	return {
+		connectOrCreate: {
+			where: { userId_name: { userId, name: type } },
+			create: {
+				name: type,
+				category: typeCategory ?? 'Accessory',
+				user: { connect: { id: userId } },
+			},
 		},
 	};
 }
@@ -45,10 +69,21 @@ function persistClothing(
 	input: CreateClothingInput,
 	order: string,
 ) {
-	const { brandLine, color, modifier, quantity, type, typeCategory, brand, imageKey } =
-		input;
+	const {
+		brandLine,
+		color,
+		modifier,
+		quantity,
+		type,
+		typeCategory,
+		brand,
+		imageKey,
+	} = input;
 	return prisma.clothing.create({
 		data: {
+			// Denormalized display strings + the id relations (kept in sync).
+			brandName: brand,
+			typeName: type,
 			brandLine,
 			color,
 			modifier,
@@ -56,13 +91,8 @@ function persistClothing(
 			imageKey,
 			order,
 			user: { connect: { id: userId } },
-			type: typeUpsert(type, typeCategory),
-			brand: {
-				connectOrCreate: {
-					where: { name: brand },
-					create: { name: brand },
-				},
-			},
+			type: typeConnectOrCreate(userId, type, typeCategory),
+			brand: brandConnectOrCreate(userId, brand),
 		},
 	});
 }
@@ -70,7 +100,8 @@ function persistClothing(
 /** Loads a clothing row, 404ing if it doesn't belong to `userId`. */
 async function requireClothing(userId: string, id: string) {
 	const clothing = await prisma.clothing.findUnique({ where: { id } });
-	if (clothing?.userId !== userId) throw new ApiError(404, 'Clothing not found');
+	if (clothing?.userId !== userId)
+		throw new ApiError(404, 'Clothing not found');
 	return clothing;
 }
 
@@ -88,7 +119,9 @@ export async function createClothingBatch(
 	// each do a brand/type `connectOrCreate`; if two rows share the SAME new brand
 	// or type they'd race and both try to insert it, violating the unique `name`
 	// constraint (P2002). Seeding them first means every row just connects.
-	const brandNames = [...new Set(items.map((i) => i.brand.trim()))].filter(Boolean);
+	const brandNames = [...new Set(items.map((i) => i.brand.trim()))].filter(
+		Boolean,
+	);
 	const typeMap = new Map<string, 'Top' | 'Bottom' | 'Accessory'>();
 	for (const item of items) {
 		const name = item.type.trim();
@@ -98,11 +131,15 @@ export async function createClothingBatch(
 	}
 	await Promise.all([
 		prisma.brand.createMany({
-			data: brandNames.map((name) => ({ name })),
+			data: brandNames.map((name) => ({ name, userId })),
 			skipDuplicates: true,
 		}),
 		prisma.clothingType.createMany({
-			data: [...typeMap].map(([name, category]) => ({ name, category })),
+			data: [...typeMap].map(([name, category]) => ({
+				name,
+				category,
+				userId,
+			})),
 			skipDuplicates: true,
 		}),
 	]);
@@ -138,16 +175,28 @@ export async function editClothing(
 	input: EditClothingInput,
 ) {
 	const clothing = await requireClothing(userId, id);
-	const { brandLine, color, modifier, quantity, type, typeCategory, brand, imageKey } =
-		input;
+	const {
+		brandLine,
+		color,
+		modifier,
+		quantity,
+		type,
+		typeCategory,
+		brand,
+		imageKey,
+	} = input;
 
 	const payload = { brandLine, color, modifier, quantity, imageKey };
-	if (type) Object.assign(payload, { type: typeUpsert(type, typeCategory) });
+	if (type) {
+		Object.assign(payload, {
+			typeName: type,
+			type: typeConnectOrCreate(userId, type, typeCategory),
+		});
+	}
 	if (brand) {
 		Object.assign(payload, {
-			brand: {
-				connectOrCreate: { where: { name: brand }, create: { name: brand } },
-			},
+			brandName: brand,
+			brand: brandConnectOrCreate(userId, brand),
 		});
 	}
 
@@ -165,7 +214,11 @@ export async function deleteClothing(userId: string, id: string) {
  * controlled @dnd-kit board computes the new rank from the piece's final neighbours
  * within its type group and sends it, so the server just validates ownership + sets it.
  */
-export async function reorderClothing(userId: string, id: string, order: string) {
+export async function reorderClothing(
+	userId: string,
+	id: string,
+	order: string,
+) {
 	const clothing = await requireClothing(userId, id);
 	await prisma.clothing.update({
 		where: { id: clothing.id },
@@ -175,14 +228,20 @@ export async function reorderClothing(userId: string, id: string, order: string)
 }
 
 export async function scanClothingImage(
+	userId: string,
 	imageKey: string,
 ): Promise<{ suggestion: ClothingScanSuggestion | null }> {
 	const [types, brands, { body, contentType }] = await Promise.all([
 		prisma.clothingType.findMany({
+			where: { userId },
 			select: { name: true, category: true },
 			orderBy: { name: 'asc' },
 		}),
-		prisma.brand.findMany({ select: { name: true }, orderBy: { name: 'asc' } }),
+		prisma.brand.findMany({
+			where: { userId },
+			select: { name: true },
+			orderBy: { name: 'asc' },
+		}),
 		getObject(imageKey),
 	]);
 

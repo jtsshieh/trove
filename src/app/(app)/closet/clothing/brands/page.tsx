@@ -28,7 +28,7 @@ export default function Brands() {
 				<div>
 					<h1 className="text-3xl">Brands</h1>
 					<h2 className="mb-4 text-base text-neutral-600">
-						These are the brands currently registered to the system.
+						The brands in your personal catalog.
 					</h2>
 				</div>
 				<CreateBrandDialog />

@@ -54,24 +54,6 @@ const clothingTypes: { name: string; category: ClothingCategory }[] = [
 const brands = ['Uniqlo', 'Nike', 'Adidas', 'Patagonia', 'Away', "Levi's"];
 
 export async function runSeed() {
-	for (const type of clothingTypes) {
-		await prisma.clothingType.upsert({
-			where: { name: type.name },
-			update: { category: type.category },
-			create: type,
-		});
-	}
-	console.log(`seeded ${clothingTypes.length} clothing types`);
-
-	for (const name of brands) {
-		await prisma.brand.upsert({
-			where: { name },
-			update: {},
-			create: { name },
-		});
-	}
-	console.log(`seeded ${brands.length} brands`);
-
 	const password = await hash('jtsshieh');
 	const user = await prisma.user.upsert({
 		where: { username: 'jtsshieh' },
@@ -79,6 +61,25 @@ export async function runSeed() {
 		create: { username: 'jtsshieh', password, role: UserRole.ADMIN },
 	});
 	console.log('seeded dev user (jtsshieh)');
+
+	// Brands + clothing types are now per-user — create them owned by the dev user.
+	for (const type of clothingTypes) {
+		await prisma.clothingType.upsert({
+			where: { userId_name: { userId: user.id, name: type.name } },
+			update: { category: type.category },
+			create: { ...type, userId: user.id },
+		});
+	}
+	console.log(`seeded ${clothingTypes.length} clothing types`);
+
+	for (const name of brands) {
+		await prisma.brand.upsert({
+			where: { userId_name: { userId: user.id, name } },
+			update: {},
+			create: { name, userId: user.id },
+		});
+	}
+	console.log(`seeded ${brands.length} brands`);
 
 	// ——— Catalog the dev user owns (idempotent by name/attributes) ———
 	async function ensureLuggage(name: string, order: string) {
@@ -139,10 +140,19 @@ export async function runSeed() {
 			found ??
 			(await prisma.clothing.create({
 				data: {
-					...c,
+					brandName: c.brandName,
+					typeName: c.typeName,
+					color: c.color,
 					quantity: c.quantity ?? 1,
 					order: (clothingRank = clothingRank.genNext()).toString(),
-					userId: user.id,
+					user: { connect: { id: user.id } },
+					// Brands/types are seeded above for this user — connect by composite.
+					brand: {
+						connect: { userId_name: { userId: user.id, name: c.brandName } },
+					},
+					type: {
+						connect: { userId_name: { userId: user.id, name: c.typeName } },
+					},
 				},
 			}))
 		);

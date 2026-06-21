@@ -9,8 +9,10 @@ model User {
   password String
   role     UserRole @default(USER)
 
-  clothes    Clothing[]
-  essentials Essential[]
+  clothes       Clothing[]
+  brands        Brand[]
+  clothingTypes ClothingType[]
+  essentials    Essential[]
 
   luggage    Luggage[]
   containers Container[]

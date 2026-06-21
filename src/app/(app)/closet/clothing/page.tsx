@@ -2,15 +2,18 @@ import { HydrationBoundary, dehydrate } from '@tanstack/react-query';
 import { Suspense } from 'react';
 
 import { Skeleton } from '@/components/ui/skeleton';
+import { DEFAULT_CLOTHING_TYPES } from '@/lib/clothing-types-catalog';
+import { listClothingTypes } from '@/lib/domains/clothing-types/service';
 import { getQueryClient } from '@/lib/query-client';
 
-import { getUserSettings } from '@/lib/auth';
+import { getCurrentUserSafe, getUserSettings } from '@/lib/auth';
 import { getAllBrands } from './brands/_data/fetchers';
 import { BrandsListContent } from './brands/page-wrapper';
 import { getAllClothingTypesWithClothes } from './_data/fetchers';
 import { brandsQueryOptions, clothingTypesQueryOptions } from './_data/queries';
 import { WardrobeContent } from './page-wrapper';
 import { WardrobeTabs } from './wardrobe-tabs';
+import { ClothingTypesManager } from './types/clothing-types-manager';
 
 export default async function WardrobePage() {
 	// Prefetch what the TAB BAR's action buttons need (brands + types for the Add
@@ -50,6 +53,11 @@ export default async function WardrobePage() {
 						brands={
 							<Suspense fallback={<BrandsSkeleton />}>
 								<BrandsData />
+							</Suspense>
+						}
+						types={
+							<Suspense fallback={<TypesSkeleton />}>
+								<TypesData />
 							</Suspense>
 						}
 					/>
@@ -101,6 +109,24 @@ async function BrandsData() {
 	);
 }
 
+/**
+ * Streams the types tab: the manager is a plain client component (props, not a
+ * query), so we just load the user's catalog server-side and hand it the existing
+ * types + the suggested catalog to fill the picker's "don't include" column.
+ */
+async function TypesData() {
+	const user = await getCurrentUserSafe();
+	const existing = await listClothingTypes(user.id);
+	return (
+		<div className="mx-auto w-full max-w-screen-md">
+			<ClothingTypesManager
+				existing={existing.map((t) => ({ name: t.name, category: t.category }))}
+				catalog={DEFAULT_CLOTHING_TYPES}
+			/>
+		</div>
+	);
+}
+
 function WardrobeSkeleton() {
 	return (
 		<div className="flex flex-1 flex-col gap-8">
@@ -124,6 +150,14 @@ function BrandsSkeleton() {
 			{Array.from({ length: 8 }).map((_, i) => (
 				<Skeleton key={i} className="h-32 w-full rounded-xl" />
 			))}
+		</div>
+	);
+}
+
+function TypesSkeleton() {
+	return (
+		<div className="mx-auto w-full max-w-screen-md">
+			<Skeleton className="h-96 w-full rounded-xl" />
 		</div>
 	);
 }

@@ -9,10 +9,11 @@ const paramsSchema = z.object({ name: z.string() });
 export const PATCH = authedRoute({
 	params: paramsSchema,
 	body: editBrandSchema,
-	handler: ({ params, body }) => service.editBrand(params.name, body),
+	handler: ({ user, params, body }) =>
+		service.editBrand(user.id, params.name, body),
 });
 
 export const DELETE = authedRoute({
 	params: paramsSchema,
-	handler: ({ params }) => service.deleteBrand(params.name),
+	handler: ({ user, params }) => service.deleteBrand(user.id, params.name),
 });

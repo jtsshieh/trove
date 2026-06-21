@@ -19,8 +19,8 @@ export default async function ClosetOverview() {
 			prisma.essential.count({ where: { userId: user.id } }),
 			prisma.luggage.count({ where: { userId: user.id } }),
 			prisma.container.count({ where: { userId: user.id } }),
-			prisma.brand.count(),
-			prisma.clothingType.count(),
+			prisma.brand.count({ where: { userId: user.id } }),
+			prisma.clothingType.count({ where: { userId: user.id } }),
 		]);
 
 	const cards = [

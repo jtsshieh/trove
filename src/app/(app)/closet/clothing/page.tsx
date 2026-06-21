@@ -5,13 +5,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getQueryClient } from '@/lib/query-client';
 
 import { getUserSettings } from '@/lib/auth';
-import { getAllTrips } from '@/app/(app)/trip-planner/[tripId]/_data/fetchers';
-import { getAllOutfits } from '@/app/(app)/outfits/_data/fetchers';
-import { outfitsQueryOptions } from '@/app/(app)/outfits/_data/queries';
-import { OutfitBuilder } from '@/app/(app)/outfits/outfit-builder';
 import { getAllBrands } from './brands/_data/fetchers';
 import { BrandsListContent } from './brands/page-wrapper';
-import { getAllClothingTypesWithClothes, getAllClothes } from './_data/fetchers';
+import { getAllClothingTypesWithClothes } from './_data/fetchers';
 import { brandsQueryOptions, clothingTypesQueryOptions } from './_data/queries';
 import { WardrobeContent } from './page-wrapper';
 import { WardrobeTabs } from './wardrobe-tabs';
@@ -38,10 +34,9 @@ export default async function WardrobePage() {
 		<div className="flex w-full flex-1 justify-center">
 			<div className="flex w-full max-w-screen-2xl flex-1 flex-col">
 				<div className="mb-4 flex flex-col gap-1 border-b pb-4">
-					<h1 className="text-3xl font-bold">Wardrobe</h1>
+					<h1 className="text-3xl font-bold">Clothing</h1>
 					<h2 className="text-base text-neutral-600">
-						Everything in your closet, the outfits you build from it, and the
-						brands you track.
+						Everything in your closet and the brands you track.
 					</h2>
 				</div>
 				<HydrationBoundary state={dehydrate(queryClient)}>
@@ -50,11 +45,6 @@ export default async function WardrobePage() {
 						clothes={
 							<Suspense fallback={<WardrobeSkeleton />}>
 								<WardrobeData />
-							</Suspense>
-						}
-						outfits={
-							<Suspense fallback={<OutfitsSkeleton />}>
-								<OutfitsContent />
 							</Suspense>
 						}
 						brands={
@@ -96,24 +86,6 @@ async function WardrobeData() {
 	);
 }
 
-async function OutfitsContent() {
-	const queryClient = getQueryClient();
-	const [, wardrobe, trips] = await Promise.all([
-		queryClient.prefetchQuery({
-			queryKey: outfitsQueryOptions.queryKey,
-			queryFn: getAllOutfits,
-		}),
-		getAllClothes(),
-		getAllTrips(),
-	]);
-
-	return (
-		<HydrationBoundary state={dehydrate(queryClient)}>
-			<OutfitBuilder wardrobe={wardrobe} trips={trips} chromeless />
-		</HydrationBoundary>
-	);
-}
-
 /** Streams the brands tab; prefetches the brands list like the standalone route. */
 async function BrandsData() {
 	const queryClient = getQueryClient();
@@ -141,16 +113,6 @@ function WardrobeSkeleton() {
 						))}
 					</div>
 				</div>
-			))}
-		</div>
-	);
-}
-
-function OutfitsSkeleton() {
-	return (
-		<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-			{Array.from({ length: 8 }).map((_, i) => (
-				<Skeleton key={i} className="aspect-[4/5] w-full rounded-xl" />
 			))}
 		</div>
 	);

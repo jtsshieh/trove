@@ -1,0 +1,6 @@
+# Edge reverse proxy for the LAN deployment. Terminates TLS with the mkcert cert
+# for closet.local and forwards to the Next.js app on the internal network.
+closet.local {
+	tls /certs/closet.local.pem /certs/closet.local-key.pem
+	reverse_proxy app:3000
+}

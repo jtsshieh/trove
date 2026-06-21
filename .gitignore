@@ -41,6 +41,10 @@ next-env.d.ts
 .env
 
 certificates
+
+# production TLS cert/key (mkcert) + updater deploy state — live only on the NAS
+/certs/
+.deploy-state.json
 # e2e test artifacts
 /e2e/*.png
 

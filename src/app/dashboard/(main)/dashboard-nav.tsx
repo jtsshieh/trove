@@ -6,6 +6,7 @@ import {
 	Luggage,
 	Menu,
 	PillBottle,
+	Server,
 	Settings,
 	Shirt,
 	X,
@@ -43,7 +44,13 @@ const navLinks = [
 	{ name: 'Packing Gear', icon: <Luggage />, href: '/packing-gear' },
 ] as const;
 
-export function DashboardNav({ user }: { user: UserDTO }) {
+export function DashboardNav({
+	user,
+	isAdmin,
+}: {
+	user: UserDTO;
+	isAdmin: boolean;
+}) {
 	const pathname = usePathname();
 	const router = useRouter();
 
@@ -95,6 +102,21 @@ export function DashboardNav({ user }: { user: UserDTO }) {
 					<Settings />
 					Settings
 				</Button>
+				{isAdmin && (
+					<Button
+						variant="ghost"
+						className={cn(
+							'flex justify-start gap-2',
+							(pathname.split('/')[2] ?? '') === 'system' &&
+								'bg-brand-subtle text-brand hover:bg-brand-subtle hover:text-brand',
+						)}
+						nativeButton={false}
+						render={<Link href="/dashboard/system" />}
+					>
+						<Server />
+						System
+					</Button>
+				)}
 				<Button
 					variant="ghost"
 					className={cn('flex justify-start gap-2')}
@@ -131,6 +153,16 @@ export function DashboardNav({ user }: { user: UserDTO }) {
 						<Settings />
 						Settings
 					</DropdownMenuItem>
+					{isAdmin && (
+						<DropdownMenuItem
+							className="flex gap-2"
+							nativeButton={false}
+							render={<Link href="/dashboard/system" />}
+						>
+							<Server />
+							System
+						</DropdownMenuItem>
+					)}
 					<DropdownMenuSeparator />
 					<DropdownMenuItem className="flex gap-2" onClick={handleSignOut}>
 						<LogOut />
@@ -142,7 +174,13 @@ export function DashboardNav({ user }: { user: UserDTO }) {
 	);
 }
 
-export function MobileDashboardNav({ user }: { user: UserDTO }) {
+export function MobileDashboardNav({
+	user,
+	isAdmin,
+}: {
+	user: UserDTO;
+	isAdmin: boolean;
+}) {
 	const [open, setOpen] = useState(false);
 	const pathname = usePathname();
 
@@ -159,7 +197,7 @@ export function MobileDashboardNav({ user }: { user: UserDTO }) {
 					<X className="h-4 w-4" />
 					<span className="sr-only">Close</span>
 				</SheetClose>
-				<DashboardNav user={user} />
+				<DashboardNav user={user} isAdmin={isAdmin} />
 			</SheetContent>
 		</Sheet>
 	);

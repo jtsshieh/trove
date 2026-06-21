@@ -1,0 +1,159 @@
+# Production stack for the Synology NAS deployment.
+#   - `edge` is the only LAN-facing container (its own macvlan IP, serves :443).
+#   - everything else lives on the internal bridge network.
+#   - `migrate` applies migrations + the prod seed; `app` waits for it.
+#   - `updater` drives in-app one-click updates (holds the Docker socket).
+# Bring up once with bootstrap.sh; thereafter update from the app's System page.
+name: packing-list-helper
+
+services:
+  # LAN edge: TLS termination (Caddy) + mDNS (Avahi advertises closet.local).
+  edge:
+    build:
+      context: ./edge
+    hostname: closet
+    restart: unless-stopped
+    volumes:
+      - ./certs:/certs:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    networks:
+      edge:
+        ipv4_address: ${EDGE_IP}
+      internal: {}
+    depends_on:
+      - app
+
+  # The Next.js app (standalone server).
+  app:
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - modelcache:/app/.cache
+    networks:
+      - internal
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  # One-shot: apply Prisma migrations + idempotent prod seed, then exit.
+  migrate:
+    build:
+      context: .
+      target: migrator
+    env_file: .env
+    restart: 'no'
+    networks:
+      - internal
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Privileged update supervisor. Internal-only, token-gated, holds the Docker
+  # socket + a bind-mount of the repo so it can pull/build/migrate/restart.
+  updater:
+    build:
+      context: ./updater
+    restart: unless-stopped
+    environment:
+      UPDATER_TOKEN: ${UPDATER_TOKEN:?set UPDATER_TOKEN in .env}
+      COMPOSE_FILE: compose.prod.yaml
+      COMPOSE_PROJECT_NAME: packing-list-helper
+      DEPLOY_BRANCH: ${DEPLOY_BRANCH:-main}
+      REPO_DIR: ${REPO_DIR:?set REPO_DIR in .env}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+    working_dir: ${REPO_DIR}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${REPO_DIR}:${REPO_DIR}
+    networks:
+      - internal
+
+  # Postgres — primary datastore (Prisma).
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: packingdb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d packingdb']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Redis — short-lived WebAuthn challenges.
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redisdata:/data
+    networks:
+      - internal
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # MinIO — S3-compatible object storage for item images (internal; proxied via app).
+  minio:
+    image: minio/minio
+    restart: unless-stopped
+    command: ['server', '/data', '--console-address', ':9001']
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-minioadmin}
+    volumes:
+      - miniodata:/data
+    networks:
+      - internal
+
+  # One-shot: create the images bucket once MinIO is reachable.
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      - minio
+    networks:
+      - internal
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-minioadmin}
+      S3_BUCKET: ${S3_BUCKET:-packing-images}
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 \"$${MINIO_ROOT_USER}\" \"$${MINIO_ROOT_PASSWORD}\"; do echo waiting for minio; sleep 1; done;
+      mc mb -p local/\"$${S3_BUCKET}\" || true;
+      exit 0;
+      "
+
+networks:
+  internal:
+    driver: bridge
+  # macvlan gives `edge` its own IP on the LAN so it can serve :443 and advertise
+  # closet.local without colliding with DSM. Fill in LAN_* / EDGE_IP in .env.
+  edge:
+    driver: macvlan
+    driver_opts:
+      parent: ${LAN_PARENT}
+    ipam:
+      config:
+        - subnet: ${LAN_SUBNET}
+          gateway: ${LAN_GATEWAY}
+
+volumes:
+  pgdata:
+  redisdata:
+  miniodata:
+  modelcache:

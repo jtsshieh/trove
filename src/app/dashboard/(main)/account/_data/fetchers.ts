@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation';
 import { cache } from 'react';
 import { z } from 'zod';
 
+import { ApiError } from '@/lib/api/errors';
+
 import { prisma } from '../../../../../lib/db.server';
 import { DisplayMode, PieceSize, ProvisionView } from '@/generated/prisma/enums';
 
@@ -44,6 +46,20 @@ export const getCurrentUserSafe = async () => {
 	if (!currentUser) redirect('/sign-in');
 	return currentUser;
 };
+
+/**
+ * The single admin is whoever's username matches ADMIN_USERNAME. Used to gate the
+ * server-management ("System") surface. If ADMIN_USERNAME is unset, nobody is admin.
+ */
+export function isAdmin(user: UserDTO): boolean {
+	const admin = process.env.ADMIN_USERNAME;
+	return !!admin && user.username === admin;
+}
+
+/** Throws 403 for any route a non-admin reaches. */
+export function requireAdmin(user: UserDTO): void {
+	if (!isAdmin(user)) throw new ApiError(403, 'Forbidden');
+}
 
 export interface UserSettingsDTO {
 	displayMode: DisplayMode;

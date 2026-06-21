@@ -35,8 +35,8 @@ export function LuggagePackingContent({ tripId }: { tripId: string }) {
 				description="Check off each container as it’s secured into your bags."
 				actions={
 					toPack > 0 && (
-						<span className="text-sm text-muted-foreground tabular-nums">
-							<span className="font-semibold text-foreground">{packed}</span> /{' '}
+						<span className="text-muted-foreground text-sm tabular-nums">
+							<span className="text-foreground font-semibold">{packed}</span> /{' '}
 							{toPack} ready
 						</span>
 					)

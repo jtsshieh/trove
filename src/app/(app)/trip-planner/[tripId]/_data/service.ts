@@ -31,7 +31,11 @@ export function createTrip(userId: string, input: CreateTripInput) {
 	});
 }
 
-export async function editTrip(userId: string, id: string, input: EditTripInput) {
+export async function editTrip(
+	userId: string,
+	id: string,
+	input: EditTripInput,
+) {
 	const trip = await requireTrip(userId, id);
 	return prisma.trip.update({
 		where: { id: trip.id },

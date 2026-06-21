@@ -27,7 +27,10 @@ interface ContainerProvisionListProps {
 	trip: ContainerPackingBoard;
 }
 
-export function ContainerPackList({ tripId, trip }: ContainerProvisionListProps) {
+export function ContainerPackList({
+	tripId,
+	trip,
+}: ContainerProvisionListProps) {
 	if (trip.containerProvisions.length === 0) {
 		return (
 			<EmptyState
@@ -62,8 +65,7 @@ function ContainerPackCard({
 		essentialProvisions: (EssentialProvision & { essential: Essential })[];
 	};
 }) {
-	const isClothes =
-		containerProvision.container.type === ContainerType.Clothes;
+	const isClothes = containerProvision.container.type === ContainerType.Clothes;
 
 	const provisions = isClothes
 		? containerProvision.clothingProvisions
@@ -79,7 +81,7 @@ function ContainerPackCard({
 	return (
 		<Card
 			data-complete={complete || undefined}
-			className="transition-colors duration-[var(--dur-fast)] data-[complete]:ring-ring-brand/40"
+			className="data-[complete]:ring-ring-brand/40 transition-colors duration-[var(--dur-fast)]"
 		>
 			<CardContent className="flex flex-col gap-3">
 				<div className="flex items-center gap-3">
@@ -94,12 +96,12 @@ function ContainerPackCard({
 						<p className="truncate font-medium">
 							{containerProvision.container.name}
 						</p>
-						<p className="text-xs text-muted-foreground">
+						<p className="text-muted-foreground text-xs">
 							{containerProvision.container.type}
 						</p>
 					</div>
-					<div className="flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground tabular-nums">
-						{complete && <CheckCircle2 className="size-4 text-brand" />}
+					<div className="text-muted-foreground flex shrink-0 items-center gap-1.5 text-sm tabular-nums">
+						{complete && <CheckCircle2 className="text-brand size-4" />}
 						<span className={cn(complete && 'font-medium text-brand')}>
 							{packed}/{toPack}
 						</span>
@@ -112,7 +114,7 @@ function ContainerPackCard({
 				/>
 
 				{toPack === 0 ? (
-					<p className="rounded-md bg-surface-sunken px-3 py-4 text-center text-xs text-muted-foreground">
+					<p className="bg-surface-sunken text-muted-foreground rounded-md px-3 py-4 text-center text-xs">
 						No items assigned to this container yet.
 					</p>
 				) : (

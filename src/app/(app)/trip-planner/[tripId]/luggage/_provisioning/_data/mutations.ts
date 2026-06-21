@@ -8,7 +8,9 @@ import { luggageBoardKeys } from './queries';
 import type { CreateLuggageProvisionInput } from './schemas';
 
 function onMutationError(error: unknown) {
-	toast.error(error instanceof ApiError ? error.message : 'Something went wrong');
+	toast.error(
+		error instanceof ApiError ? error.message : 'Something went wrong',
+	);
 }
 
 /** Refresh one trip's suitcases board (provisions + available suitcases) after a write. */

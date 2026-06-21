@@ -178,7 +178,9 @@ export function TripSideNav({
 							onClick={toggle}
 							className="shrink-0"
 							aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-							title={isCollapsed ? 'Expand sidebar (⌘B)' : 'Collapse sidebar (⌘B)'}
+							title={
+								isCollapsed ? 'Expand sidebar (⌘B)' : 'Collapse sidebar (⌘B)'
+							}
 						>
 							{isCollapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
 						</Button>
@@ -224,20 +226,6 @@ export function TripSideNav({
 							</Button>
 						);
 					})}
-			</div>
-
-			<div className={cn('mt-auto', isCollapsed ? 'p-2' : 'p-4')}>
-				<Button
-					variant="ghost"
-					className={cn('w-full', isCollapsed ? 'justify-center px-0' : 'justify-start')}
-					aria-label={isCollapsed ? 'Back to Trips' : undefined}
-					title={isCollapsed ? 'Back to Trips' : undefined}
-					nativeButton={false}
-					render={<Link href="/trip-planner" />}
-				>
-					<ChevronLeft />
-					{!isCollapsed && <span className="truncate">Back to Trips</span>}
-				</Button>
 			</div>
 		</nav>
 	);

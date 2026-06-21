@@ -41,7 +41,12 @@ async function provisionCounts(tripId: string, essentialIds: string[]) {
 export async function createEssentialProvisions(
 	userId: string,
 	tripId: string,
-	{ essentialIds, section, day, tripEssentialGroupId }: CreateEssentialProvisionsInput,
+	{
+		essentialIds,
+		section,
+		day,
+		tripEssentialGroupId,
+	}: CreateEssentialProvisionsInput,
 ) {
 	await requireTrip(userId, tripId);
 

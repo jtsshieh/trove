@@ -26,7 +26,8 @@ export function ContainerPackingContent({ tripId }: { tripId: string }) {
 				? containerProvision.clothingProvisions
 				: containerProvision.essentialProvisions;
 
-		const ready = items.length > 0 && items.every((provision) => provision.packed);
+		const ready =
+			items.length > 0 && items.every((provision) => provision.packed);
 		return prev + (ready ? 1 : 0);
 	}, 0);
 
@@ -40,8 +41,8 @@ export function ContainerPackingContent({ tripId }: { tripId: string }) {
 				description="Check off each item as it goes into its container."
 				actions={
 					toPack > 0 && (
-						<span className="text-sm text-muted-foreground tabular-nums">
-							<span className="font-semibold text-foreground">{packed}</span> /{' '}
+						<span className="text-muted-foreground text-sm tabular-nums">
+							<span className="text-foreground font-semibold">{packed}</span> /{' '}
 							{toPack} ready
 						</span>
 					)

@@ -21,12 +21,7 @@ import React, { Suspense } from 'react';
 
 import { ItemDisplay } from '@/components/ui/item-display';
 import { Button } from '@/components/ui/button';
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { generateClothingName } from '@/lib/generate-clothing-name';
@@ -99,8 +94,8 @@ function ProgressSection({ trip }: { trip: TripOverview }) {
 				<CardHeader className="gap-3">
 					<div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
 						<CardTitle className="text-base">Packing progress</CardTitle>
-						<span className="text-sm text-muted-foreground tabular-nums">
-							<span className="font-semibold text-foreground">
+						<span className="text-muted-foreground text-sm tabular-nums">
+							<span className="text-foreground font-semibold">
 								{stats.packed}
 							</span>{' '}
 							/ {stats.total} items packed
@@ -131,7 +126,7 @@ function StatTile({
 }) {
 	const complete = count > 0 && packed === count;
 	return (
-		<div className="flex items-center gap-3 rounded-lg bg-surface-sunken p-3">
+		<div className="bg-surface-sunken flex items-center gap-3 rounded-lg p-3">
 			<span
 				className={cn(
 					'flex size-9 shrink-0 items-center justify-center rounded-lg bg-panel text-panel-foreground [&_svg]:size-4.5',
@@ -144,7 +139,7 @@ function StatTile({
 				<p className="text-2xl leading-none font-semibold tabular-nums">
 					{count}
 				</p>
-				<p className="truncate text-xs text-muted-foreground">
+				<p className="text-muted-foreground truncate text-xs">
 					{label}
 					{count > 0 && (
 						<span className="tabular-nums"> · {packed} packed</span>
@@ -170,7 +165,7 @@ function DayAtAGlance({ trip }: { trip: TripOverview }) {
 	return (
 		<section className="flex flex-col gap-3">
 			<div className="flex items-center gap-2">
-				<CalendarRange className="size-4 text-muted-foreground" />
+				<CalendarRange className="text-muted-foreground size-4" />
 				<h2 className="text-sm font-semibold">Day at a glance</h2>
 			</div>
 
@@ -188,7 +183,7 @@ function DayAtAGlance({ trip }: { trip: TripOverview }) {
 							className="w-56 shrink-0 snap-start"
 						>
 							<CardHeader className="gap-0.5">
-								<p className="text-xs font-medium text-muted-foreground uppercase">
+								<p className="text-muted-foreground text-xs font-medium uppercase">
 									{format(day, 'EEE')}
 								</p>
 								<CardTitle className="text-sm">
@@ -197,7 +192,7 @@ function DayAtAGlance({ trip }: { trip: TripOverview }) {
 							</CardHeader>
 							<CardContent className="flex flex-col gap-2">
 								{empty ? (
-									<p className="rounded-md bg-surface-sunken px-2.5 py-3 text-center text-xs text-muted-foreground">
+									<p className="bg-surface-sunken text-muted-foreground rounded-md px-2.5 py-3 text-center text-xs">
 										Nothing planned
 									</p>
 								) : (
@@ -221,14 +216,14 @@ function DayAtAGlance({ trip }: { trip: TripOverview }) {
 											/>
 										))}
 										{clothing.length + essentials.length > 5 && (
-											<p className="px-0.5 text-xs text-muted-foreground tabular-nums">
+											<p className="text-muted-foreground px-0.5 text-xs tabular-nums">
 												+{clothing.length + essentials.length - 5} more
 											</p>
 										)}
 									</>
 								)}
 								{note && (
-									<p className="mt-0.5 line-clamp-2 rounded-md bg-brand-subtle px-2.5 py-1.5 text-xs text-foreground/80">
+									<p className="bg-brand-subtle text-foreground/80 mt-0.5 line-clamp-2 rounded-md px-2.5 py-1.5 text-xs">
 										{note}
 									</p>
 								)}
@@ -255,18 +250,18 @@ function QuickLinks({ trip }: { trip: TripOverview }) {
 					<Link
 						key={link.href}
 						href={link.href}
-						className="group/link flex items-center gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10 transition-[transform,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)] outline-none hover-hover:hover:ring-ring-brand focus-visible:ring-2 focus-visible:ring-ring-brand motion-safe:active:scale-[0.98]"
+						className="group/link bg-card ring-foreground/10 hover-hover:hover:ring-ring-brand focus-visible:ring-ring-brand flex items-center gap-3 rounded-xl p-4 ring-1 transition-[transform,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)] outline-none focus-visible:ring-2 motion-safe:active:scale-[0.98]"
 					>
-						<span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-panel text-panel-foreground transition-colors duration-[var(--dur-fast)] group-hover/link:bg-brand-subtle group-hover/link:text-brand [&_svg]:size-5">
+						<span className="bg-panel text-panel-foreground group-hover/link:bg-brand-subtle group-hover/link:text-brand flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors duration-[var(--dur-fast)] [&_svg]:size-5">
 							{link.icon}
 						</span>
 						<div className="min-w-0 flex-1">
 							<p className="font-medium">{link.label}</p>
-							<p className="truncate text-xs text-muted-foreground">
+							<p className="text-muted-foreground truncate text-xs">
 								{link.description}
 							</p>
 						</div>
-						<ArrowRight className="size-4 shrink-0 text-muted-foreground transition-transform duration-[var(--dur-fast)] ease-[var(--ease-out)] motion-safe:group-hover/link:translate-x-0.5" />
+						<ArrowRight className="text-muted-foreground size-4 shrink-0 transition-transform duration-[var(--dur-fast)] ease-[var(--ease-out)] motion-safe:group-hover/link:translate-x-0.5" />
 					</Link>
 				))}
 			</div>

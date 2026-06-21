@@ -111,7 +111,10 @@ function buildBoard(
 	board: TripClothingBoard,
 	tripId: string,
 	days: Date[],
-): { groups: Record<string, BoardProvision[]>; countById: Map<string, number> } {
+): {
+	groups: Record<string, BoardProvision[]>;
+	countById: Map<string, number>;
+} {
 	const provisions = board.clothingProvisions;
 	const groups: Record<string, BoardProvision[]> = {};
 	const countById = new Map<string, number>();
@@ -274,7 +277,8 @@ export function ClothingBoard({
 	const dayOf = useCallback(
 		(zone: Zone): Date | null => {
 			if (zone.kind === 'day') return new Date(zone.ownerId);
-			if (zone.kind === 'outfit') return outfitById.get(zone.ownerId)?.day ?? null;
+			if (zone.kind === 'outfit')
+				return outfitById.get(zone.ownerId)?.day ?? null;
 			return null;
 		},
 		[outfitById],
@@ -284,7 +288,11 @@ export function ClothingBoard({
 		(drop: SortableDrop<BoardProvision>) => {
 			const placement = zonePlacement(drop.toZone);
 			if (!placement) return;
-			const rank = rankForNeighbors(drop.destItems, drop.index, (p) => p.dayOrder);
+			const rank = rankForNeighbors(
+				drop.destItems,
+				drop.index,
+				(p) => p.dayOrder,
+			);
 			if (drop.sameZone) {
 				void persist(
 					() => changeClothingProvisionDayOrder(drop.id, rank),
@@ -415,7 +423,10 @@ export function ClothingBoard({
 	// days/outfits). Counting distinct physical units instead would always read 0 for
 	// day-reuse (one unit shared across days), so the badge never showed.
 	function reuseBadgeFor(clothingId: string): number {
-		return computeReuseCount(counts.get(clothingId) ?? 0, bringingFor(clothingId));
+		return computeReuseCount(
+			counts.get(clothingId) ?? 0,
+			bringingFor(clothingId),
+		);
 	}
 
 	function placeLabel(p: BoardProvision): string {
@@ -471,11 +482,19 @@ export function ClothingBoard({
 			/>
 		),
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-		[trip.id, counts, distinctById, bringOverrides, outfitById, handleRemovedPiece],
+		[
+			trip.id,
+			counts,
+			distinctById,
+			bringOverrides,
+			outfitById,
+			handleRemovedPiece,
+		],
 	);
 
 	const buckets = useMemo(
-		() => buildBuckets(days, groups, countById, board.tripOutfits, board.dayNotes),
+		() =>
+			buildBuckets(days, groups, countById, board.tripOutfits, board.dayNotes),
 		[days, groups, countById, board.tripOutfits, board.dayNotes],
 	);
 
@@ -524,7 +543,11 @@ export function ClothingBoard({
 							value={view}
 							onValueChange={changeView}
 							options={[
-								{ value: ProvisionView.List, icon: <ListIcon />, title: 'List' },
+								{
+									value: ProvisionView.List,
+									icon: <ListIcon />,
+									title: 'List',
+								},
 								{
 									value: ProvisionView.Calendar,
 									icon: <CalendarDays />,
@@ -673,7 +696,10 @@ function CalendarView({
 	const interval = { start: startOfDay(trip.start), end: startOfDay(trip.end) };
 
 	return (
-		<div data-testid="calendar-grid" className="-mx-1 overflow-x-auto px-1 pb-1">
+		<div
+			data-testid="calendar-grid"
+			className="-mx-1 overflow-x-auto px-1 pb-1"
+		>
 			<div className="flex flex-col gap-3 md:min-w-[52rem]">
 				<div className="hidden grid-cols-7 gap-2 px-1 md:grid">
 					{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (

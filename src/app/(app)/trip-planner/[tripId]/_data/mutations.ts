@@ -7,7 +7,9 @@ import * as api from './api';
 import type { CreateTripInput, EditTripInput } from './schemas';
 
 function onMutationError(error: unknown) {
-	toast.error(error instanceof ApiError ? error.message : 'Something went wrong');
+	toast.error(
+		error instanceof ApiError ? error.message : 'Something went wrong',
+	);
 }
 
 /** Every trip write refreshes the trips list. */

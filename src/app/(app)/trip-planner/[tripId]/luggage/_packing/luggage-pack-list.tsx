@@ -41,7 +41,7 @@ export function LuggagePackList({ tripId, trip }: LuggagePackListProps) {
 					<Card
 						key={luggageProvision.id}
 						data-complete={complete || undefined}
-						className="transition-colors duration-[var(--dur-fast)] data-[complete]:ring-ring-brand/40"
+						className="data-[complete]:ring-ring-brand/40 transition-colors duration-[var(--dur-fast)]"
 					>
 						<CardContent className="flex flex-col gap-3">
 							<div className="flex items-center gap-3">
@@ -56,12 +56,12 @@ export function LuggagePackList({ tripId, trip }: LuggagePackListProps) {
 									<p className="truncate font-medium">
 										{luggageProvision.luggage.name}
 									</p>
-									<p className="text-xs text-muted-foreground tabular-nums">
+									<p className="text-muted-foreground text-xs tabular-nums">
 										{toPack} {toPack === 1 ? 'container' : 'containers'}
 									</p>
 								</div>
-								<div className="flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground tabular-nums">
-									{complete && <CheckCircle2 className="size-4 text-brand" />}
+								<div className="text-muted-foreground flex shrink-0 items-center gap-1.5 text-sm tabular-nums">
+									{complete && <CheckCircle2 className="text-brand size-4" />}
 									<span className={cn(complete && 'font-medium text-brand')}>
 										{packed}/{toPack}
 									</span>
@@ -74,7 +74,7 @@ export function LuggagePackList({ tripId, trip }: LuggagePackListProps) {
 							/>
 
 							{toPack === 0 ? (
-								<p className="rounded-md bg-surface-sunken px-3 py-4 text-center text-xs text-muted-foreground">
+								<p className="bg-surface-sunken text-muted-foreground rounded-md px-3 py-4 text-center text-xs">
 									No containers assigned to this bag yet.
 								</p>
 							) : (

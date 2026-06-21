@@ -29,7 +29,12 @@ import type {
 import { EssentialCategory } from '@/generated/prisma/enums';
 import { rankForNeighbors, sortByRank } from '@/lib/dnd/lexorank';
 import { useDragBoard, type SortableDrop } from '@/lib/dnd/use-drag-board';
-import { encodeZone, type AcceptPredicate, type ItemData, type Zone } from '@/lib/dnd/zone';
+import {
+	encodeZone,
+	type AcceptPredicate,
+	type ItemData,
+	type Zone,
+} from '@/lib/dnd/zone';
 import { cn } from '@/lib/utils';
 
 import { TripPageHeader } from '../_components/trip-page-header';
@@ -239,9 +244,7 @@ export function EssentialsBoard({
 			map.set(
 				encodeZone(subgroupZone(g.id)),
 				toStacks(
-					provisions.filter(
-						(p) => (p.tripEssentialGroupId ?? null) === g.id,
-					),
+					provisions.filter((p) => (p.tripEssentialGroupId ?? null) === g.id),
 				),
 			);
 		}
@@ -325,7 +328,11 @@ export function EssentialsBoard({
 				actions={
 					<div className="flex items-center gap-2">
 						<AddGroup tripId={tripId} groups={groups} />
-						<AddEssentials tripId={tripId} closet={closet} usedKeys={usedKeys} />
+						<AddEssentials
+							tripId={tripId}
+							closet={closet}
+							usedKeys={usedKeys}
+						/>
 						<DisplayToggle />
 					</div>
 				}
@@ -380,16 +387,16 @@ function CategoryLane({
 		<section
 			data-testid="category-lane"
 			data-category={category}
-			className="flex flex-col gap-2 rounded-xl bg-panel p-2 text-panel-foreground"
+			className="bg-panel text-panel-foreground flex flex-col gap-2 rounded-xl p-2"
 		>
 			<header className="flex items-center gap-2 px-2 pt-1">
-				<span className="flex size-6 items-center justify-center text-muted-foreground">
+				<span className="text-muted-foreground flex size-6 items-center justify-center">
 					{CATEGORY_ICONS[category]}
 				</span>
 				<h2 className="flex-1 text-sm font-semibold">
 					{CATEGORY_LABELS[category]}
 				</h2>
-				<span className="text-xs tabular-nums text-muted-foreground">
+				<span className="text-muted-foreground text-xs tabular-nums">
 					{total}
 				</span>
 				<AddSubGroupButton tripId={tripId} category={category} />
@@ -460,7 +467,7 @@ function SubGroup({
 					'data-[drop-target]:bg-brand-subtle',
 				)}
 			>
-				<div className="flex items-center gap-1 border-b border-foreground/10 px-0.5 pb-1">
+				<div className="border-foreground/10 flex items-center gap-1 border-b px-0.5 pb-1">
 					<span className="bg-foreground/8 flex size-5 shrink-0 items-center justify-center rounded">
 						<Layers className="size-3.5" />
 					</span>
@@ -468,7 +475,7 @@ function SubGroup({
 					<DeleteSubGroupButton group={group} />
 				</div>
 				{stacks.length === 0 ? (
-					<p className="px-1 py-2 text-center text-[0.7rem] text-muted-foreground">
+					<p className="text-muted-foreground px-1 py-2 text-center text-[0.7rem]">
 						Drop items here
 					</p>
 				) : (
@@ -551,7 +558,7 @@ function StackTile({
 						ref={handleRef}
 						type="button"
 						aria-label="Reorder essential"
-						className="flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground transition-colors duration-[var(--dur-fast)] outline-none hover-hover:hover:bg-muted hover-hover:hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+						className="text-muted-foreground hover-hover:hover:bg-muted hover-hover:hover:text-foreground focus-visible:ring-ring flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded-md transition-colors duration-[var(--dur-fast)] outline-none focus-visible:ring-2 active:cursor-grabbing"
 					>
 						<GripVertical className="size-4" />
 					</button>
@@ -560,7 +567,11 @@ function StackTile({
 						imageKey={rep.essential.imageKey}
 						fallbackIcon={CATEGORY_ICONS[rep.essential.category]}
 						size="panel"
-						meta={rep.essential.quantity > 1 ? `${count} of ${rep.essential.quantity}` : undefined}
+						meta={
+							rep.essential.quantity > 1
+								? `${count} of ${rep.essential.quantity}`
+								: undefined
+						}
 						className="min-w-0 flex-1"
 					/>
 					{rep.essential.quantity > 1 && (
@@ -603,7 +614,7 @@ function StackTile({
 						aria-label={`Remove ${rep.essential.name}`}
 						disabled={isPending}
 						onClick={removeOne}
-						className="shrink-0 text-muted-foreground hover-hover:hover:text-destructive"
+						className="text-muted-foreground hover-hover:hover:text-destructive shrink-0"
 					>
 						<X className="size-4" />
 					</Button>
@@ -624,7 +635,10 @@ function SubGroupName({ group }: { group: TripEssentialGroup }) {
 			setValue(group.name);
 			return;
 		}
-		void renameGroup.mutateAsync({ id: group.id, input: { name: value.trim() } });
+		void renameGroup.mutateAsync({
+			id: group.id,
+			input: { name: value.trim() },
+		});
 	}
 
 	if (editing) {
@@ -650,7 +664,7 @@ function SubGroupName({ group }: { group: TripEssentialGroup }) {
 		<button
 			type="button"
 			onClick={() => setEditing(true)}
-			className="flex-1 truncate text-left text-xs font-semibold hover-hover:hover:underline"
+			className="hover-hover:hover:underline flex-1 truncate text-left text-xs font-semibold"
 			title="Rename sub-group"
 		>
 			{group.name}
@@ -670,7 +684,7 @@ function DeleteSubGroupButton({ group }: { group: TripEssentialGroup }) {
 			title="Ungroup (keeps the items in this category)"
 			loading={pending}
 			onClick={() => void deleteGroup.mutateAsync(group.id)}
-			className="shrink-0 text-muted-foreground hover-hover:hover:text-foreground"
+			className="text-muted-foreground hover-hover:hover:text-foreground shrink-0"
 		>
 			{!pending && <X className="size-3.5" />}
 		</Button>
@@ -701,7 +715,7 @@ function AddSubGroupButton({
 					toast.error('Could not create group');
 				}
 			}}
-			className="shrink-0 text-muted-foreground hover-hover:hover:text-foreground"
+			className="text-muted-foreground hover-hover:hover:text-foreground shrink-0"
 		>
 			{!pending && <Plus className="size-4" />}
 		</Button>
@@ -781,8 +795,8 @@ function AddEssentials({
 							emptyText="No essentials found."
 							className="max-h-72"
 						/>
-						<div className="flex items-center justify-between gap-2 border-t border-border p-2">
-							<span className="pl-1 text-xs text-muted-foreground">
+						<div className="border-border flex items-center justify-between gap-2 border-t p-2">
+							<span className="text-muted-foreground pl-1 text-xs">
 								{selected.length} selected
 							</span>
 							<Button
@@ -803,7 +817,13 @@ function AddEssentials({
 	);
 }
 
-function AddGroup({ tripId, groups }: { tripId: string; groups: BoardGroup[] }) {
+function AddGroup({
+	tripId,
+	groups,
+}: {
+	tripId: string;
+	groups: BoardGroup[];
+}) {
 	const [open, setOpen] = React.useState(false);
 	const [pendingId, setPendingId] = React.useState<string | null>(null);
 	const importGroup_ = useImportEssentialGroup(tripId);
@@ -858,7 +878,7 @@ function AddGroup({ tripId, groups }: { tripId: string; groups: BoardGroup[] }) 
 								className="h-auto justify-between gap-2 px-2 py-1.5 text-left font-normal"
 							>
 								<span className="truncate">{group.name}</span>
-								<span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+								<span className="text-muted-foreground shrink-0 text-xs tabular-nums">
 									{group.essentialIds.length}
 								</span>
 							</Button>

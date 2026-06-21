@@ -202,7 +202,7 @@ function UnassignedPool({ containers }: { containers: BoardContainer[] }) {
 		>
 			<div className="flex items-center justify-between gap-2 px-0.5">
 				<h2 className="text-sm font-semibold">Unassigned containers</h2>
-				<span className="text-xs text-muted-foreground tabular-nums">
+				<span className="text-muted-foreground text-xs tabular-nums">
 					{containers.length}
 				</span>
 			</div>
@@ -274,7 +274,7 @@ function SuitcaseCard({
 					'data-[drop-target]:bg-brand-subtle',
 				)}
 			>
-				<header className="flex items-center gap-2 border-b border-border px-3 py-2.5">
+				<header className="border-border flex items-center gap-2 border-b px-3 py-2.5">
 					<ItemDisplay
 						name={suitcase.luggage.name}
 						imageKey={suitcase.luggage.imageKey}

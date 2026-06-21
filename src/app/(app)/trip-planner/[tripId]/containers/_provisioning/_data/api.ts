@@ -29,7 +29,8 @@ export const deleteContainerProvision = (id: string) =>
 export const moveClothingProvisionToContainer = (
 	id: string,
 	input: MoveProvisionToContainerInput,
-) => api.patch<MutationResult>(`/api/clothing-provisions/${id}/container`, input);
+) =>
+	api.patch<MutationResult>(`/api/clothing-provisions/${id}/container`, input);
 
 export const changeClothingProvisionContainerOrder = (
 	id: string,

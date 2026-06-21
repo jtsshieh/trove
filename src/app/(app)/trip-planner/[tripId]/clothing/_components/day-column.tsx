@@ -106,82 +106,82 @@ export function DayColumn({
 				)}
 			>
 				<div className="flex items-baseline justify-between gap-2 px-0.5">
-				<div className="flex items-baseline gap-1.5">
-					<span
-						className={cn(
-							'text-xs font-semibold tracking-wide uppercase',
-							today ? 'text-brand' : 'text-muted-foreground',
-						)}
-					>
-						{format(day, 'EEE')}
-					</span>
-					<span
-						className={cn(
-							'font-semibold tabular-nums',
-							isCalendar ? 'text-sm md:text-base' : 'text-base',
-							today && 'text-brand',
-						)}
-					>
-						{/* Stacked (narrow) calendar cells show the full date like the
+					<div className="flex items-baseline gap-1.5">
+						<span
+							className={cn(
+								'text-xs font-semibold tracking-wide uppercase',
+								today ? 'text-brand' : 'text-muted-foreground',
+							)}
+						>
+							{format(day, 'EEE')}
+						</span>
+						<span
+							className={cn(
+								'font-semibold tabular-nums',
+								isCalendar ? 'text-sm md:text-base' : 'text-base',
+								today && 'text-brand',
+							)}
+						>
+							{/* Stacked (narrow) calendar cells show the full date like the
 						    list; the md+ grid shows just the day number to stay compact. */}
-						{isCalendar ? (
-							<>
-								<span className="md:hidden">{format(day, 'MMM d')}</span>
-								<span className="hidden md:inline">{format(day, 'd')}</span>
-							</>
-						) : (
-							format(day, 'MMM d')
-						)}
-					</span>
+							{isCalendar ? (
+								<>
+									<span className="md:hidden">{format(day, 'MMM d')}</span>
+									<span className="hidden md:inline">{format(day, 'd')}</span>
+								</>
+							) : (
+								format(day, 'MMM d')
+							)}
+						</span>
+					</div>
+					<AddOutfitButton tripId={tripId} day={day} />
 				</div>
-				<AddOutfitButton tripId={tripId} day={day} />
-			</div>
 
-			<DayNoteField tripId={tripId} day={day} note={note} />
+				<DayNoteField tripId={tripId} day={day} note={note} />
 
 				{/* Loose content fills the rest of the day card (which IS the drop zone),
 				    so the empty space below is droppable too. */}
 				<div className="flex flex-1 flex-col gap-1.5">
 					{outfits.map(({ outfit, pieces }) => {
-					const zone: Zone = { kind: 'outfit', ownerId: outfit.id };
-					return (
-						<OutfitGroup
-							key={outfit.id}
-							outfit={outfit}
-							zone={zone}
-							count={pieces.length}
-							grid={gridPieces}
-						>
-							{pieces.map((s, i) =>
-								renderPiece(s.rep, i, zone, pieceSize, s.count),
-							)}
-						</OutfitGroup>
-					);
-				})}
+						const zone: Zone = { kind: 'outfit', ownerId: outfit.id };
+						return (
+							<OutfitGroup
+								key={outfit.id}
+								outfit={outfit}
+								zone={zone}
+								count={pieces.length}
+								grid={gridPieces}
+							>
+								{pieces.map((s, i) =>
+									renderPiece(s.rep, i, zone, pieceSize, s.count),
+								)}
+							</OutfitGroup>
+						);
+					})}
 
-				{/* Loose pieces flow in a fill grid (image-forward) or a stack (compact).
+					{/* Loose pieces flow in a fill grid (image-forward) or a stack (compact).
 				    The empty placeholder renders as ONE cell INSIDE this grid so it stays
 				    tile-sized in every mode (it ballooned to a full-width square before),
 				    and the day's height barely shifts when the first piece lands. */}
-				{(isEmpty || loose.length > 0) && (
-					<div
-						className={cn(
-							gridPieces
-								? large
-									? 'grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-2'
-									: 'grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-1.5'
-								: 'flex flex-col gap-1',
-						)}
-					>
-						{isEmpty ? (
-							<EmptyTile size={pieceSize} />
-						) : (
-							loose.map((s, i) =>
-								renderPiece(s.rep, i, looseZone, pieceSize, s.count),
-							)
-						)}
-					</div>
-				)}
+					{(isEmpty || loose.length > 0) && (
+						<div
+							className={cn(
+								gridPieces
+									? large
+										? 'grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-2'
+										: 'grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-1.5'
+									: 'flex flex-col gap-1',
+							)}
+						>
+							{isEmpty ? (
+								<EmptyTile size={pieceSize} />
+							) : (
+								loose.map((s, i) =>
+									renderPiece(s.rep, i, looseZone, pieceSize, s.count),
+								)
+							)}
+						</div>
+					)}
 				</div>
 			</DropZone>
 		</div>

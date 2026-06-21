@@ -74,7 +74,9 @@ export type ChangeClothingProvisionDayOrderInput = z.infer<
 export type DeleteClothingProvisionInput = z.infer<
 	typeof deleteClothingProvisionSchema
 >;
-export type SetClothingBringingInput = z.infer<typeof setClothingBringingSchema>;
+export type SetClothingBringingInput = z.infer<
+	typeof setClothingBringingSchema
+>;
 export type AddClothingToDaysInput = z.infer<typeof addClothingToDaysSchema>;
 export type UpsertTripDayNoteInput = z.infer<typeof upsertTripDayNoteSchema>;
 export type AssignOutfitToDaysInput = z.infer<typeof assignOutfitToDaysSchema>;
@@ -82,7 +84,9 @@ export type CreateAdHocTripOutfitInput = z.infer<
 	typeof createAdHocTripOutfitSchema
 >;
 export type RenameTripOutfitInput = z.infer<typeof renameTripOutfitSchema>;
-export type MoveTripOutfitToDayInput = z.infer<typeof moveTripOutfitToDaySchema>;
+export type MoveTripOutfitToDayInput = z.infer<
+	typeof moveTripOutfitToDaySchema
+>;
 export type SaveTripOutfitAsTemplateInput = z.infer<
 	typeof saveTripOutfitAsTemplateSchema
 >;

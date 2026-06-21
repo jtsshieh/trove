@@ -31,14 +31,14 @@ export function TripPageHeader({
 		>
 			<div className="flex min-w-0 flex-1 items-center gap-3">
 				{icon && (
-					<span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-panel text-panel-foreground [&_svg]:size-5">
+					<span className="bg-panel text-panel-foreground flex size-10 shrink-0 items-center justify-center rounded-lg [&_svg]:size-5">
 						{icon}
 					</span>
 				)}
 				<div className="min-w-0 flex-1">
 					<h1 className="truncate text-xl font-bold tracking-tight">{title}</h1>
 					{description && (
-						<div className="truncate text-sm text-muted-foreground">
+						<div className="text-muted-foreground truncate text-sm">
 							{description}
 						</div>
 					)}

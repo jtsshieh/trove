@@ -64,7 +64,10 @@ export async function moveContainerProvisionToLuggage(
 	provisionId: string,
 	{ luggageProvisionId, luggageOrder }: MoveContainerProvisionToLuggageInput,
 ) {
-	const containerProvision = await requireContainerProvision(userId, provisionId);
+	const containerProvision = await requireContainerProvision(
+		userId,
+		provisionId,
+	);
 	await requireContainer(userId, containerProvision.containerId);
 
 	if (luggageProvisionId === null) {

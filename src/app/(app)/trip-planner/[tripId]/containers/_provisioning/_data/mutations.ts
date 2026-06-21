@@ -8,7 +8,9 @@ import { containerBoardKeys } from './queries';
 import type { CreateContainerProvisionInput } from './schemas';
 
 function onMutationError(error: unknown) {
-	toast.error(error instanceof ApiError ? error.message : 'Something went wrong');
+	toast.error(
+		error instanceof ApiError ? error.message : 'Something went wrong',
+	);
 }
 
 /** Refresh one trip's board (pool, containers, available catalog) after a write. */

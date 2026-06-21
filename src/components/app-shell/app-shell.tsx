@@ -82,9 +82,16 @@ export function AppShell({
 							/>
 						</PopoverContent>
 					</Popover>
-					<span className="text-brand px-1 font-bold">
-						{app?.name ?? 'Closet Manager'}
-					</span>
+					{app ? (
+						<Link
+							href={app.href}
+							className="text-brand px-1 font-bold hover:opacity-80"
+						>
+							{app.name}
+						</Link>
+					) : (
+						<span className="text-brand px-1 font-bold">Closet Manager</span>
+					)}
 					{sections.length > 0 && (
 						<div className="ml-2 flex gap-1">
 							{sections.map((s) => (

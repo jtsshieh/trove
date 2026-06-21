@@ -8,7 +8,9 @@ import { luggagePackingBoardKeys } from './queries';
 import type { MarkContainerPackedInput } from './schemas';
 
 function onMutationError(error: unknown) {
-	toast.error(error instanceof ApiError ? error.message : 'Something went wrong');
+	toast.error(
+		error instanceof ApiError ? error.message : 'Something went wrong',
+	);
 }
 
 /** Refresh one trip's luggage packing board (suitcases + container packed state) after a write. */

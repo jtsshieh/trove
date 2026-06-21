@@ -49,7 +49,7 @@ export function LuggageProvisioningContent({ tripId }: { tripId: string }) {
 				<div className="mb-6 flex flex-col gap-1.5">
 					<Progress value={total === 0 ? 0 : (assigned / total) * 100}>
 						<span className="text-sm font-medium">Containers assigned</span>
-						<span className="ml-auto text-sm text-muted-foreground tabular-nums">
+						<span className="text-muted-foreground ml-auto text-sm tabular-nums">
 							{assigned} / {total}
 						</span>
 					</Progress>

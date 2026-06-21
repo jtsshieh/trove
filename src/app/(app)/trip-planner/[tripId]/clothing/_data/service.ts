@@ -42,7 +42,8 @@ function toPlacement(p: {
 }): PlacementLike {
 	return {
 		section: p.section,
-		dayKey: p.section === ProvisionSection.Day && p.day ? p.day.toISOString() : null,
+		dayKey:
+			p.section === ProvisionSection.Day && p.day ? p.day.toISOString() : null,
 	};
 }
 
@@ -108,7 +109,8 @@ export async function createClothingProvisions(
 	});
 	const ownedIds = new Set(owned.map((c) => c.id));
 	const ownedRequested = clothingIds.filter((id) => ownedIds.has(id));
-	if (ownedRequested.length === 0) throw new ApiError(404, 'Clothing not found');
+	if (ownedRequested.length === 0)
+		throw new ApiError(404, 'Clothing not found');
 
 	// Enforce the exclusivity + capacity rules per piece. Each accepted id
 	// reserves one more unit of itself within this same call, so a duplicate
@@ -136,7 +138,12 @@ export async function createClothingProvisions(
 	}
 
 	const last = await prisma.clothingProvision.findFirst({
-		where: { tripId, section, day: placementDay, tripOutfitId: tripOutfitId ?? null },
+		where: {
+			tripId,
+			section,
+			day: placementDay,
+			tripOutfitId: tripOutfitId ?? null,
+		},
 		orderBy: { dayOrder: 'desc' },
 		select: { dayOrder: true },
 	});
@@ -190,12 +197,15 @@ export async function addClothingToDays(
 
 	// Existing LOOSE day-placements of this piece (outside any outfit).
 	const existing = await prisma.clothingProvision.findMany({
-		where: { tripId, clothingId, section: ProvisionSection.Day, tripOutfitId: null },
+		where: {
+			tripId,
+			clothingId,
+			section: ProvisionSection.Day,
+			tripOutfitId: null,
+		},
 		select: { day: true },
 	});
-	const existingKeys = new Set(
-		existing.map((p) => p.day!.toISOString()),
-	);
+	const existingKeys = new Set(existing.map((p) => p.day!.toISOString()));
 
 	// Days it isn't already on, chronological.
 	const availableDays = tripDays.filter(

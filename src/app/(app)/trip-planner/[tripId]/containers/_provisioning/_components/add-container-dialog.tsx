@@ -45,9 +45,7 @@ export function AddContainerDialog({
 	async function onAdd() {
 		try {
 			await Promise.all(
-				selected.map((containerId) =>
-					create.mutateAsync({ containerId }),
-				),
+				selected.map((containerId) => create.mutateAsync({ containerId })),
 			);
 			toast.success(
 				selected.length === 1

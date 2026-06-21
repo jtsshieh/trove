@@ -56,7 +56,7 @@ export function OutfitGroup({
 				accepts={['clothing']}
 				className="ring-foreground/10 bg-surface-sunken data-[drop-target]:bg-brand-subtle rounded-xl p-1.5 ring-1 transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)]"
 			>
-				<div className="mb-1 flex items-center gap-1 border-b border-foreground/10 px-0.5 pb-1">
+				<div className="border-foreground/10 mb-1 flex items-center gap-1 border-b px-0.5 pb-1">
 					<DragSource id={outfit.id} type="trip-outfit" zone={dragZone}>
 						{({ ref, handleRef, isDragging }) => (
 							<span

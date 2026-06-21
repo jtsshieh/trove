@@ -48,7 +48,7 @@ export function ContainerChip({
 				ref={handleRef}
 				type="button"
 				aria-label={`Drag ${cp.container.name}`}
-				className="-mr-0.5 flex shrink-0 cursor-grab touch-none items-center justify-center rounded-md p-0.5 text-muted-foreground/60 transition-colors duration-[var(--dur-fast)] outline-none hover-hover:hover:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring active:cursor-grabbing"
+				className="text-muted-foreground/60 hover-hover:hover:text-muted-foreground focus-visible:ring-ring -mr-0.5 flex shrink-0 cursor-grab touch-none items-center justify-center rounded-md p-0.5 transition-colors duration-[var(--dur-fast)] outline-none focus-visible:ring-2 active:cursor-grabbing"
 			>
 				<GripVertical className="size-4" />
 			</button>
@@ -65,7 +65,7 @@ export function ContainerChip({
 					type="button"
 					onClick={onRemove}
 					aria-label={`Remove ${cp.container.name} from suitcase`}
-					className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 opacity-0 transition-[color,opacity] duration-[var(--dur-fast)] outline-none hover-hover:hover:bg-muted hover-hover:hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/chip:opacity-100"
+					className="text-muted-foreground/60 hover-hover:hover:bg-muted hover-hover:hover:text-foreground focus-visible:ring-ring flex size-6 shrink-0 items-center justify-center rounded-md opacity-0 transition-[color,opacity] duration-[var(--dur-fast)] outline-none group-hover/chip:opacity-100 focus-visible:opacity-100 focus-visible:ring-2"
 				>
 					<X className="size-4" />
 				</button>

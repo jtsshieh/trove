@@ -20,8 +20,7 @@ export const fetchLuggageBoard = (tripId: string) =>
 export const createLuggageProvision = (
 	tripId: string,
 	input: CreateLuggageProvisionInput,
-) =>
-	api.post<MutationResult>(`/api/trips/${tripId}/luggage-provisions`, input);
+) => api.post<MutationResult>(`/api/trips/${tripId}/luggage-provisions`, input);
 
 export const deleteLuggageProvision = (id: string) =>
 	api.del<MutationResult>(`/api/luggage-provisions/${id}`);
@@ -29,4 +28,5 @@ export const deleteLuggageProvision = (id: string) =>
 export const moveContainerProvisionToLuggage = (
 	id: string,
 	input: MoveContainerProvisionToLuggageInput,
-) => api.patch<MutationResult>(`/api/container-provisions/${id}/luggage`, input);
+) =>
+	api.patch<MutationResult>(`/api/container-provisions/${id}/luggage`, input);

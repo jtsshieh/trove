@@ -33,10 +33,9 @@ export const createClothingProvisions = (
 	api.post<MutationResult>(`/api/trips/${tripId}/clothing-provisions`, input);
 
 export const addClothingToDays = (tripId: string, clothingId: string) =>
-	api.post<MutationResult>(
-		`/api/trips/${tripId}/clothing-provisions/spread`,
-		{ clothingId },
-	);
+	api.post<MutationResult>(`/api/trips/${tripId}/clothing-provisions/spread`, {
+		clothingId,
+	});
 
 export const moveClothingProvision = (
 	id: string,
@@ -44,7 +43,9 @@ export const moveClothingProvision = (
 ) => api.patch<MutationResult>(`/api/clothing-provisions/${id}/move`, input);
 
 export const changeClothingProvisionDayOrder = (id: string, dayOrder: string) =>
-	api.patch<MutationResult>(`/api/clothing-provisions/${id}/order`, { dayOrder });
+	api.patch<MutationResult>(`/api/clothing-provisions/${id}/order`, {
+		dayOrder,
+	});
 
 export const deleteClothingProvision = (
 	id: string,
@@ -83,4 +84,6 @@ export const deleteTripOutfit = (id: string) =>
 	api.del<MutationResult>(`/api/trip-outfits/${id}`);
 
 export const saveTripOutfitAsTemplate = (id: string, name: string) =>
-	api.post<MutationResult>(`/api/trip-outfits/${id}/save-as-template`, { name });
+	api.post<MutationResult>(`/api/trip-outfits/${id}/save-as-template`, {
+		name,
+	});

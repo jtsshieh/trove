@@ -8,7 +8,9 @@ import type { ContainerPackingBoardData } from './api';
 import { containerPackingBoardKeys } from './queries';
 
 function onMutationError(error: unknown) {
-	toast.error(error instanceof ApiError ? error.message : 'Something went wrong');
+	toast.error(
+		error instanceof ApiError ? error.message : 'Something went wrong',
+	);
 }
 
 type ProvisionKind = 'clothing' | 'essential';
@@ -58,8 +60,7 @@ function usePackedToggle(tripId: string, kind: ProvisionKind) {
 			fn(id, { packed }),
 		onMutate: async ({ id, packed }) => {
 			await queryClient.cancelQueries({ queryKey: key });
-			const previous =
-				queryClient.getQueryData<ContainerPackingBoardData>(key);
+			const previous = queryClient.getQueryData<ContainerPackingBoardData>(key);
 			if (previous) {
 				queryClient.setQueryData<ContainerPackingBoardData>(
 					key,

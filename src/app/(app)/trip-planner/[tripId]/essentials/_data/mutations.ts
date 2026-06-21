@@ -13,7 +13,9 @@ import type {
 } from './schemas';
 
 function onMutationError(error: unknown) {
-	toast.error(error instanceof ApiError ? error.message : 'Something went wrong');
+	toast.error(
+		error instanceof ApiError ? error.message : 'Something went wrong',
+	);
 }
 
 /** Refresh one trip's board (provisions, sub-groups, closet, groups) after a write. */

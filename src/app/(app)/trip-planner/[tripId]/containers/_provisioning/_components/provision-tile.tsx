@@ -82,7 +82,7 @@ export function ProvisionTile({
 							onPointerDown={(e) => e.stopPropagation()}
 							onClick={onRemove}
 							aria-label={`Remove ${item.name} from container`}
-							className="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 opacity-0 transition-[color,opacity] duration-[var(--dur-fast)] outline-none hover-hover:hover:bg-muted hover-hover:hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover/tile:opacity-100"
+							className="text-muted-foreground/60 hover-hover:hover:bg-muted hover-hover:hover:text-foreground focus-visible:ring-ring flex size-6 shrink-0 items-center justify-center rounded-md opacity-0 transition-[color,opacity] duration-[var(--dur-fast)] outline-none group-hover/tile:opacity-100 focus-visible:opacity-100 focus-visible:ring-2"
 						>
 							<X className="size-4" />
 						</button>

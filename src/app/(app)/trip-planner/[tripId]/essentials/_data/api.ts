@@ -34,8 +34,13 @@ export const moveEssentialProvision = (
 	input: MoveEssentialProvisionInput,
 ) => api.patch<MutationResult>(`/api/essential-provisions/${id}/move`, input);
 
-export const changeEssentialProvisionDayOrder = (id: string, dayOrder: string) =>
-	api.patch<MutationResult>(`/api/essential-provisions/${id}/order`, { dayOrder });
+export const changeEssentialProvisionDayOrder = (
+	id: string,
+	dayOrder: string,
+) =>
+	api.patch<MutationResult>(`/api/essential-provisions/${id}/order`, {
+		dayOrder,
+	});
 
 export const deleteEssentialProvision = (id: string) =>
 	api.del<MutationResult>(`/api/essential-provisions/${id}`);
@@ -49,7 +54,10 @@ export const importEssentialGroup = (
 	tripId: string,
 	input: ImportEssentialGroupInput,
 ) =>
-	api.post<MutationResult>(`/api/trips/${tripId}/essential-groups/import`, input);
+	api.post<MutationResult>(
+		`/api/trips/${tripId}/essential-groups/import`,
+		input,
+	);
 
 export const renameTripEssentialGroup = (
 	id: string,

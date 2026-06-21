@@ -10,6 +10,7 @@ import {
 	ContainerType,
 	EssentialCategory,
 	ProvisionSection,
+	UserRole,
 } from '../src/generated/prisma/enums';
 
 const prisma = new PrismaClient({
@@ -74,8 +75,8 @@ export async function runSeed() {
 	const password = await hash('jtsshieh');
 	const user = await prisma.user.upsert({
 		where: { username: 'jtsshieh' },
-		update: { password },
-		create: { username: 'jtsshieh', password },
+		update: { password, role: UserRole.ADMIN },
+		create: { username: 'jtsshieh', password, role: UserRole.ADMIN },
 	});
 	console.log('seeded dev user (jtsshieh)');
 

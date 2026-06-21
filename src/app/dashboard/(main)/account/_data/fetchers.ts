@@ -7,11 +7,17 @@ import { z } from 'zod';
 import { ApiError } from '@/lib/api/errors';
 
 import { prisma } from '../../../../../lib/db.server';
-import { DisplayMode, PieceSize, ProvisionView } from '@/generated/prisma/enums';
+import {
+	DisplayMode,
+	PieceSize,
+	ProvisionView,
+	UserRole,
+} from '@/generated/prisma/enums';
 
 export interface UserDTO {
 	id: string;
 	username: string;
+	role: UserRole;
 }
 const jwtSchema = z.object({
 	sub: z.string(),
@@ -36,7 +42,7 @@ async function _getCurrentUser(): Promise<UserDTO | null> {
 	const user = await prisma.user.findUnique({ where: { id: parsed.data.sub } });
 	if (!user) return null;
 
-	return { id: user.id, username: user.username };
+	return { id: user.id, username: user.username, role: user.role };
 }
 
 export const getCurrentUser = cache(_getCurrentUser);
@@ -47,16 +53,12 @@ export const getCurrentUserSafe = async () => {
 	return currentUser;
 };
 
-/**
- * The single admin is whoever's username matches ADMIN_USERNAME. Used to gate the
- * server-management ("System") surface. If ADMIN_USERNAME is unset, nobody is admin.
- */
+/** Admin is a DB-backed role (set at first-run setup / managed in the Admin app). */
 export function isAdmin(user: UserDTO): boolean {
-	const admin = process.env.ADMIN_USERNAME;
-	return !!admin && user.username === admin;
+	return user.role === UserRole.ADMIN;
 }
 
-/** Throws 403 for any route a non-admin reaches. */
+/** Throws 403 for any API route a non-admin reaches. */
 export function requireAdmin(user: UserDTO): void {
 	if (!isAdmin(user)) throw new ApiError(403, 'Forbidden');
 }
@@ -75,8 +77,7 @@ export const getUserSettings = cache(async (): Promise<UserSettingsDTO> => {
 	});
 	return {
 		displayMode: settings?.displayMode ?? DisplayMode.Both,
-		defaultProvisionView:
-			settings?.defaultProvisionView ?? ProvisionView.List,
+		defaultProvisionView: settings?.defaultProvisionView ?? ProvisionView.List,
 		pieceSize: settings?.pieceSize ?? PieceSize.Compact,
 	};
 });

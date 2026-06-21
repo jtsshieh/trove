@@ -3,50 +3,43 @@ import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 import { PrismaClient } from '../src/generated/prisma/client';
-import { ClothingCategory } from '../src/generated/prisma/enums';
+import { UserRole } from '../src/generated/prisma/enums';
 
 /**
- * Production seed: reference data only. Idempotent (upsert by name) so the deploy
- * pipeline can run it on every update. Unlike the dev seed (prisma/seed.ts) it
- * creates NO user, brands, or sample trip — accounts are registered via the app.
+ * Production seed. Clothing types are now chosen in the first-run setup wizard and
+ * managed in the Admin app, so this no longer seeds reference data. It only
+ * guarantees the instance has an admin:
+ *   - fresh DB (no users): nothing to do — the first admin is created via /setup;
+ *   - DB that predates the `role` column (all users defaulted to USER): promote the
+ *     oldest user so the instance isn't locked out (/setup is disabled once any user
+ *     exists). Idempotent — safe to run on every deploy.
  */
 
 const prisma = new PrismaClient({
 	adapter: new PrismaPg(process.env.DATABASE_URL!),
 });
 
-const clothingTypes: { name: string; category: ClothingCategory }[] = [
-	// Tops
-	{ name: 'T-shirt', category: ClothingCategory.Top },
-	{ name: 'Long Sleeve Shirt', category: ClothingCategory.Top },
-	{ name: 'Polo', category: ClothingCategory.Top },
-	{ name: 'Dress Shirt', category: ClothingCategory.Top },
-	{ name: 'Hoodie', category: ClothingCategory.Top },
-	{ name: 'Quarter Zip', category: ClothingCategory.Top },
-	{ name: 'Jacket', category: ClothingCategory.Top },
-	// Bottoms
-	{ name: 'Jeans', category: ClothingCategory.Bottom },
-	{ name: 'Chinos', category: ClothingCategory.Bottom },
-	{ name: 'Dress Pants', category: ClothingCategory.Bottom },
-	{ name: 'Shorts', category: ClothingCategory.Bottom },
-	{ name: 'Sweatpants', category: ClothingCategory.Bottom },
-	// Accessories
-	{ name: 'Socks', category: ClothingCategory.Accessory },
-	{ name: 'Underwear', category: ClothingCategory.Accessory },
-	{ name: 'Belt', category: ClothingCategory.Accessory },
-	{ name: 'Tie', category: ClothingCategory.Accessory },
-	{ name: 'Sunglasses', category: ClothingCategory.Accessory },
-];
-
 export async function runProdSeed() {
-	for (const type of clothingTypes) {
-		await prisma.clothingType.upsert({
-			where: { name: type.name },
-			update: { category: type.category },
-			create: type,
-		});
+	const userCount = await prisma.user.count();
+	if (userCount === 0) {
+		console.log('no users yet — first admin is created via /setup');
+		return;
 	}
-	console.log(`seeded ${clothingTypes.length} clothing types`);
+	const adminCount = await prisma.user.count({
+		where: { role: UserRole.ADMIN },
+	});
+	if (adminCount > 0) {
+		console.log('admin already present');
+		return;
+	}
+	const oldest = await prisma.user.findFirst({ orderBy: { id: 'asc' } });
+	if (oldest) {
+		await prisma.user.update({
+			where: { id: oldest.id },
+			data: { role: UserRole.ADMIN },
+		});
+		console.log(`promoted "${oldest.username}" to ADMIN (no admin existed)`);
+	}
 }
 
 // Auto-run only when invoked directly (e.g. `tsx prisma/seed.prod.ts`).

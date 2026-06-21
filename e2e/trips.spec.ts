@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function gotoBoard(page: Page, path: string): Promise<void> {
-	await page.goto('/dashboard');
+	await page.goto('/trip-planner');
 	const href = await page
 		.locator('a:has-text("Open")')
 		.first()
@@ -21,7 +21,7 @@ async function gotoBoard(page: Page, path: string): Promise<void> {
 }
 
 // Open the Create Trip dialog and fill the name + a date range, then submit.
-// createTrip redirects to /dashboard/<id> on success.
+// createTrip redirects to /trip-planner/<id> on success.
 async function createTrip(page: Page, name: string): Promise<void> {
 	await page.getByRole('button', { name: 'Create Trip' }).click();
 	const dialog = page.getByRole('dialog');
@@ -49,7 +49,7 @@ async function createTrip(page: Page, name: string): Promise<void> {
 test('create trip — date range stays open until two distinct days are picked', async ({
 	page,
 }) => {
-	await page.goto('/dashboard');
+	await page.goto('/trip-planner');
 	await page.waitForLoadState('networkidle').catch(() => {});
 
 	await page.getByRole('button', { name: 'Create Trip' }).click();
@@ -74,7 +74,7 @@ test('create trip — date range stays open until two distinct days are picked',
 });
 
 test('create trip — Done confirms a single-day range', async ({ page }) => {
-	await page.goto('/dashboard');
+	await page.goto('/trip-planner');
 	await page.waitForLoadState('networkidle').catch(() => {});
 
 	await page.getByRole('button', { name: 'Create Trip' }).click();
@@ -99,14 +99,14 @@ test('dashboard — create a trip shows it in the trips list', async ({
 	page,
 }) => {
 	const name = 'QA Trip Create';
-	await page.goto('/dashboard');
+	await page.goto('/trip-planner');
 	await page.waitForLoadState('networkidle').catch(() => {});
 
 	await createTrip(page, name);
 
 	// Creating redirects into the trip viewer; head back to the dashboard list.
-	await expect(page).toHaveURL(/\/dashboard\/[^/]+$/);
-	await page.goto('/dashboard');
+	await expect(page).toHaveURL(/\/trip-planner\/[^/]+$/);
+	await page.goto('/trip-planner');
 	await page.waitForLoadState('networkidle').catch(() => {});
 
 	await expect(page.getByText(name)).toBeVisible();
@@ -114,21 +114,21 @@ test('dashboard — create a trip shows it in the trips list', async ({
 
 test('dashboard — open a trip lands on the trip viewer', async ({ page }) => {
 	const name = 'QA Trip Open';
-	await page.goto('/dashboard');
+	await page.goto('/trip-planner');
 	await page.waitForLoadState('networkidle').catch(() => {});
 
 	await createTrip(page, name);
-	await expect(page).toHaveURL(/\/dashboard\/[^/]+$/);
+	await expect(page).toHaveURL(/\/trip-planner\/[^/]+$/);
 
 	// Return to the dashboard and open the trip via its Open link.
-	await page.goto('/dashboard');
+	await page.goto('/trip-planner');
 	await page.waitForLoadState('networkidle').catch(() => {});
 
 	// Find our trip's card and click its Open link (client-side nav, so wait for
 	// the URL to actually change rather than a network-idle that fires too early).
 	const card = page.locator('[data-slot="card"]').filter({ hasText: name });
 	await card.locator('a:has-text("Open")').click();
-	await page.waitForURL(/\/dashboard\/[^/]+$/);
+	await page.waitForURL(/\/trip-planner\/[^/]+$/);
 
 	// The name appears as both the sidebar h1 and the overview h1 — assert the nav's.
 	await expect(
@@ -140,11 +140,11 @@ test('manage — rename then delete a trip', async ({ page }) => {
 	const name = 'QA Trip Manage';
 	const renamed = 'QA Trip Renamed';
 
-	await page.goto('/dashboard');
+	await page.goto('/trip-planner');
 	await page.waitForLoadState('networkidle').catch(() => {});
 	// createTrip redirects straight into the new trip, so use that URL directly.
 	await createTrip(page, name);
-	await page.waitForURL(/\/dashboard\/[^/]+$/);
+	await page.waitForURL(/\/trip-planner\/[^/]+$/);
 	const tripUrl = new URL(page.url()).pathname;
 
 	await page.goto(`${tripUrl}/manage`);
@@ -171,6 +171,6 @@ test('manage — rename then delete a trip', async ({ page }) => {
 	await deleteDialog.getByRole('button', { name: 'Delete' }).click();
 
 	await page.waitForLoadState('networkidle').catch(() => {});
-	await expect(page).toHaveURL(/\/dashboard$/);
+	await expect(page).toHaveURL(/\/trip-planner$/);
 	await expect(page.getByText(renamed)).toHaveCount(0);
 });

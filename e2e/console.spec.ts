@@ -20,7 +20,7 @@ test('no console errors across key surfaces and forms', async ({ page }) => {
 
 	// (The sign-in form's controlled-input fix is exercised by auth.setup.)
 	// Dashboard + create-trip dialog — uncontrolled name input + nav button.
-	await page.goto('/dashboard');
+	await page.goto('/trip-planner');
 	await page.getByRole('button', { name: 'Create Trip' }).click();
 	await page.getByPlaceholder('Give your trip a nice title').fill('Beach Week');
 	await page.keyboard.press('Escape');
@@ -38,7 +38,7 @@ test('no console errors across key surfaces and forms', async ({ page }) => {
 
 	// Wardrobe bulk-add dialog — dropping photos must not log React-19 teardown
 	// errors (Toggle/Select mount churn, object-URL previews).
-	await page.goto('/dashboard/wardrobe');
+	await page.goto('/closet/clothing');
 	await page.waitForLoadState('networkidle').catch(() => {});
 	await page.getByTestId('bulk-add-trigger').click();
 	await expect(page.getByTestId('bulk-add-dialog')).toBeVisible();

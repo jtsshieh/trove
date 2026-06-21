@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function gotoEssentials(page: Page): Promise<void> {
-	await page.goto('/dashboard');
+	await page.goto('/trip-planner');
 	const href = await page
 		.locator('a:has-text("Open")')
 		.first()

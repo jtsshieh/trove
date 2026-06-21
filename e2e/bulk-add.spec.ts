@@ -44,7 +44,7 @@ async function stubPipeline(page: Page): Promise<void> {
 }
 
 async function gotoWardrobe(page: Page): Promise<void> {
-	await page.goto('/dashboard/wardrobe');
+	await page.goto('/closet/clothing');
 	await page.waitForLoadState('networkidle').catch(() => {});
 }
 

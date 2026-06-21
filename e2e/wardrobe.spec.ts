@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function gotoBoard(page: Page, path: string): Promise<void> {
-	await page.goto('/dashboard');
+	await page.goto('/trip-planner');
 	const href = await page
 		.locator('a:has-text("Open")')
 		.first()
@@ -44,7 +44,7 @@ test('closet shows the per-trip bringing count + units left on the socks', async
 test('wardrobe — create dialog shows the large photo + all fields + scan', async ({
 	page,
 }) => {
-	await page.goto('/dashboard/wardrobe');
+	await page.goto('/closet/clothing');
 	await page.waitForLoadState('networkidle').catch(() => {});
 
 	await page.getByRole('button', { name: 'Add Clothing' }).click();
@@ -74,7 +74,7 @@ test('wardrobe — create dialog shows the large photo + all fields + scan', asy
 test('wardrobe — edit dialog has no scan button and prefills the item', async ({
 	page,
 }) => {
-	await page.goto('/dashboard/wardrobe');
+	await page.goto('/closet/clothing');
 	await page.waitForLoadState('networkidle').catch(() => {});
 
 	const hoodie = page
@@ -98,7 +98,7 @@ test('wardrobe — edit dialog has no scan button and prefills the item', async 
 test('wardrobe — create a clothing item with quantity 4 shows a ×4 stack badge', async ({
 	page,
 }) => {
-	await page.goto('/dashboard/wardrobe');
+	await page.goto('/closet/clothing');
 	await page.waitForLoadState('networkidle').catch(() => {});
 
 	await page.getByRole('button', { name: 'Add Clothing' }).click();
@@ -132,7 +132,7 @@ test('wardrobe — create a clothing item with quantity 4 shows a ×4 stack badg
 test('wardrobe — single-quantity items render no quantity badge', async ({
 	page,
 }) => {
-	await page.goto('/dashboard/wardrobe');
+	await page.goto('/closet/clothing');
 	await page.waitForLoadState('networkidle').catch(() => {});
 
 	const hoodie = page
@@ -145,7 +145,7 @@ test('wardrobe — single-quantity items render no quantity badge', async ({
 test('wardrobe — drag-to-reorder within a type group persists', async ({
 	page,
 }) => {
-	await page.goto('/dashboard/wardrobe');
+	await page.goto('/closet/clothing');
 	await page.waitForLoadState('networkidle').catch(() => {});
 
 	// Seed has one Hoodie; add a second so the Hoodie group has two cards to order.

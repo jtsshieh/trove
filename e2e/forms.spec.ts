@@ -14,7 +14,7 @@ test.beforeEach(async ({ page }) => {
 test('brand create — TanStack submit creates, closes, and resets the dialog', async ({
 	page,
 }) => {
-	await page.goto('/dashboard/wardrobe/brands');
+	await page.goto('/closet/clothing/brands');
 	await page.waitForLoadState('networkidle').catch(() => {});
 
 	// The create trigger is the icon-only "+" button in the page header row — the
@@ -52,7 +52,7 @@ test('brand create — TanStack submit creates, closes, and resets the dialog', 
 test('clothing create — required Selects (null defaults) block submit with a validation message', async ({
 	page,
 }) => {
-	await page.goto('/dashboard/wardrobe');
+	await page.goto('/closet/clothing');
 	await page.waitForLoadState('networkidle').catch(() => {});
 
 	await page.getByRole('button', { name: 'Add Clothing' }).click();
@@ -72,7 +72,7 @@ test('clothing create — required Selects (null defaults) block submit with a v
 test('brand edit — dialog preloads the current name (defaultValues) and renames', async ({
 	page,
 }) => {
-	await page.goto('/dashboard/wardrobe/brands');
+	await page.goto('/closet/clothing/brands');
 	await page.waitForLoadState('networkidle').catch(() => {});
 
 	const card = page.locator('[data-slot="card"]').filter({ hasText: 'Uniqlo' });
@@ -97,7 +97,7 @@ test('brand edit — dialog preloads the current name (defaultValues) and rename
 test('essential create — required-category Select + name submits and persists', async ({
 	page,
 }) => {
-	await page.goto('/dashboard/essentials');
+	await page.goto('/closet/essentials');
 	await page.waitForLoadState('networkidle').catch(() => {});
 
 	await page.getByRole('button', { name: 'Add Essential' }).click();
@@ -123,7 +123,7 @@ test('essential create — required-category Select + name submits and persists'
 test('clothing edit — Type/Brand/Color selects preload from the item (controlled prefill)', async ({
 	page,
 }) => {
-	await page.goto('/dashboard/wardrobe');
+	await page.goto('/closet/clothing');
 	await page.waitForLoadState('networkidle').catch(() => {});
 
 	const card = page

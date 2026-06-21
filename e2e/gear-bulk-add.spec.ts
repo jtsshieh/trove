@@ -63,7 +63,7 @@ test('containers bulk add — continue → run → fill → create persists each
 	page,
 }) => {
 	await stubPipeline(page);
-	await page.goto('/dashboard/packing-gear/containers');
+	await page.goto('/closet/packing-gear/containers');
 
 	await page.getByTestId('container-bulk-add-trigger').click();
 	const dialog = page.getByTestId('container-bulk-add-dialog');
@@ -109,7 +109,7 @@ test('luggage bulk add — continue → run → fill → create persists each ba
 	page,
 }) => {
 	await stubPipeline(page);
-	await page.goto('/dashboard/packing-gear/luggage');
+	await page.goto('/closet/packing-gear/luggage');
 
 	await page.getByTestId('luggage-bulk-add-trigger').click();
 	const dialog = page.getByTestId('luggage-bulk-add-dialog');

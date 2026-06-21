@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function gotoBoard(page: Page, path: string): Promise<void> {
-	await page.goto('/dashboard');
+	await page.goto('/trip-planner');
 	const href = await page
 		.locator('a:has-text("Open")')
 		.first()

@@ -18,7 +18,9 @@ setup('authenticate', async ({ page }) => {
 	await password.fill('jtsshieh');
 	await page.getByRole('button', { name: 'Continue' }).click();
 
-	await page.waitForURL('**/dashboard', { timeout: 15_000 });
+	await page.waitForURL((url) => new URL(url).pathname === '/', {
+		timeout: 15_000,
+	});
 
 	mkdirSync('e2e/.auth', { recursive: true });
 	await page.context().storageState({ path: authFile });

@@ -39,14 +39,14 @@ async function visit(page: Page, path: string): Promise<void> {
 test('every main route renders without errors', async ({ page }) => {
 	const errors = trackErrors(page);
 	const routes = [
-		'/dashboard',
-		'/dashboard/account',
-		'/dashboard/wardrobe',
-		'/dashboard/wardrobe/brands',
-		'/dashboard/outfits',
-		'/dashboard/essentials',
-		'/dashboard/packing-gear/containers',
-		'/dashboard/packing-gear/luggage',
+		'/trip-planner',
+		'/account',
+		'/closet/clothing',
+		'/closet/clothing/brands',
+		'/outfits',
+		'/closet/essentials',
+		'/closet/packing-gear/containers',
+		'/closet/packing-gear/luggage',
 	];
 	for (const route of routes) {
 		errors.push(`\n----- ${route} -----`);
@@ -64,7 +64,7 @@ test('every main route renders without errors', async ({ page }) => {
 test('every trip-viewer route renders without errors', async ({ page }) => {
 	const errors = trackErrors(page);
 
-	await page.goto('/dashboard');
+	await page.goto('/trip-planner');
 	const href = await page
 		.locator('a:has-text("Open")')
 		.first()
@@ -92,7 +92,7 @@ test('every trip-viewer route renders without errors', async ({ page }) => {
 });
 
 test('packing-gear index redirects into a sub-tab', async ({ page }) => {
-	await page.goto('/dashboard/packing-gear');
+	await page.goto('/closet/packing-gear');
 	await page.waitForLoadState('networkidle').catch(() => {});
-	await expect(page).toHaveURL(/\/dashboard\/packing-gear\/(containers|luggage)/);
+	await expect(page).toHaveURL(/\/trip-planner\/packing-gear\/(containers|luggage)/);
 });

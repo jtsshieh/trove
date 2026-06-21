@@ -78,7 +78,7 @@ export function ContainerList({ containers }: { containers: Container[] }) {
 			<DropZone
 				zone={LIBRARY_ZONE}
 				accepts={['container']}
-				className="grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+				className="grid auto-rows-fr grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
 			>
 				{ordered.map((container, index) => (
 					<Sortable

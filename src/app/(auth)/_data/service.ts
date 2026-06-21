@@ -10,16 +10,19 @@ import {
 	PublicKeyCredentialRequestOptionsJSON,
 	RegistrationResponseJSON,
 } from '@simplewebauthn/types';
-import { verify } from 'argon2';
-import { SignJWT } from 'jose';
-import { cookies } from 'next/headers';
-
 import {
 	getPasskey,
 	getUserPasskeys,
-} from '@/app/dashboard/(main)/account/_data/fetchers';
+	signIn,
+	signInWithPassword,
+	signOut,
+} from '@/lib/auth';
 import { ApiError } from '@/lib/api/errors';
 import { prisma } from '@/lib/db.server';
+
+// Sign-in/out primitives now live in @/lib/auth; re-export so existing importers
+// (account service, /api/auth/* routes) keep working unchanged.
+export { signIn, signInWithPassword, signOut };
 
 import aaguids from './aaguids.json';
 import { origin, rpID, rpName } from './auth-constants';
@@ -208,38 +211,4 @@ export async function verifyAuthentication(
 	await signIn(passkey.userId);
 
 	return { type: 'success' };
-}
-
-export async function signIn(userId: string) {
-	const jwt = await new SignJWT({ sub: userId })
-		.setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
-		.setIssuedAt()
-		.setExpirationTime('1 week')
-		.sign(new TextEncoder().encode(process.env.JWT_SECRET!));
-
-	(await cookies()).set('auth', jwt, {
-		httpOnly: true,
-		secure: process.env.NODE_ENV === 'production',
-		maxAge: 60 * 60 * 24 * 7,
-		path: '/',
-	});
-}
-
-export async function signInWithPassword(username: string, password: string) {
-	const user = await prisma.user.findUnique({ where: { username: username } });
-	if (user && (await verify(user.password, password))) {
-		await signIn(user.id);
-		return {
-			success: true,
-		};
-	} else {
-		return {
-			success: false,
-		};
-	}
-}
-
-export async function signOut() {
-	(await cookies()).delete('auth');
-	return { success: true };
 }

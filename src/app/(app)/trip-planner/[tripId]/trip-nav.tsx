@@ -281,7 +281,7 @@ function TripModeSelector({
 				<SelectTrigger
 					aria-label={`Trip mode: ${meta.label}`}
 					title={meta.label}
-					className="size-9 justify-center gap-0 px-0 [&>svg:last-of-type]:hidden"
+					className="size-9 self-center justify-center gap-0 px-0 [&>svg:last-of-type]:hidden"
 				>
 					<Icon className="size-4" />
 				</SelectTrigger>

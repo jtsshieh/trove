@@ -7,3 +7,10 @@ export const markClothingProvisionPackedSchema = z.object({
 export const markEssentialProvisionPackedSchema = z.object({
 	packed: z.boolean(),
 });
+
+export type MarkClothingProvisionPackedInput = z.infer<
+	typeof markClothingProvisionPackedSchema
+>;
+export type MarkEssentialProvisionPackedInput = z.infer<
+	typeof markEssentialProvisionPackedSchema
+>;

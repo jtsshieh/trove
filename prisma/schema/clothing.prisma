@@ -12,20 +12,49 @@ model Clothing {
 
   brandLine String? @map("brand_line")
   color     String
-  number    Int?
 
   modifier String?
 
+  // How many identical units the user owns (e.g. 12 white socks). Shown as a
+  // stack in the wardrobe; each drag onto a day still places a single unit.
+  quantity Int @default(1)
+
   typeName String       @map("type_name")
   type     ClothingType @relation(fields: [typeName], references: [name])
+
+  imageKey String? @map("image_key")
+
+  // Manual wardrobe ordering (lexorank). One ordered scope per user; the wardrobe
+  // grid sorts by it and drag-to-reorder rewrites a single piece's rank.
+  order String @default("")
 
   userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   clothingProvisions ClothingProvision[]
+  outfitItems        OutfitItem[]
+  tripBrings         TripClothingBring[]
 
-  @@unique([brandName, brandLine, color, typeName, number, modifier])
+  @@unique([brandName, brandLine, color, typeName, modifier])
   @@map("clothes")
+}
+
+// Per-(trip, clothing) "bringing" count: how many of the owned units the user
+// plans to take on this trip. Absent row → default of bring-all (clothing.quantity).
+// Effective bringing drives "left to place" and the reuse threshold.
+model TripClothingBring {
+  id String @id @default(cuid())
+
+  bringing Int
+
+  tripId String @map("trip_id")
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  clothingId String   @map("clothing_id")
+  clothing   Clothing @relation(fields: [clothingId], references: [id], onDelete: Cascade)
+
+  @@unique([tripId, clothingId])
+  @@map("trip_clothing_brings")
 }
 
 model Brand {

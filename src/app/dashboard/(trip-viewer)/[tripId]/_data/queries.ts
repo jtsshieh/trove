@@ -1,8 +1,8 @@
 import { queryOptions } from '@tanstack/react-query';
 
-import { fetchAllTrips } from './actions';
+import { fetchTrips } from './api';
 
 export const tripsQueryOptions = queryOptions({
 	queryKey: ['trips'],
-	queryFn: fetchAllTrips,
+	queryFn: fetchTrips,
 });

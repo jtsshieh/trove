@@ -7,15 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getQueryClient } from '@/lib/query-client';
 
+import { getAllBrands } from './_data/fetchers';
 import { brandsQueryOptions } from './_data/queries';
 import { BrandsListContent } from './page-wrapper';
 import { CreateBrandDialog } from './brand-dialogs';
 
 export default function Brands() {
-	const queryClient = getQueryClient();
-	// Non-blocking: kick off the query without awaiting so the page can stream.
-	void queryClient.prefetchQuery(brandsQueryOptions);
-
 	return (
 		<div className="h-svh w-screen p-8">
 			<Button
@@ -36,12 +33,26 @@ export default function Brands() {
 				</div>
 				<CreateBrandDialog />
 			</div>
-			<HydrationBoundary state={dehydrate(queryClient)}>
-				<Suspense fallback={<BrandsListSkeleton />}>
-					<BrandsListContent />
-				</Suspense>
-			</HydrationBoundary>
+			<Suspense fallback={<BrandsListSkeleton />}>
+				<BrandsData />
+			</Suspense>
 		</div>
+	);
+}
+
+async function BrandsData() {
+	const queryClient = getQueryClient();
+	// Prefetch with the direct DB loader (the client queryFn is a relative fetch
+	// that can't run on the server), then hydrate the client.
+	await queryClient.prefetchQuery({
+		queryKey: brandsQueryOptions.queryKey,
+		queryFn: getAllBrands,
+	});
+
+	return (
+		<HydrationBoundary state={dehydrate(queryClient)}>
+			<BrandsListContent />
+		</HydrationBoundary>
 	);
 }
 

@@ -10,10 +10,15 @@ model Essential {
   name     String
   category EssentialCategory
 
+  quantity Int @default(1)
+
+  imageKey String? @map("image_key")
+
   userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   essentialProvisions EssentialProvision[]
+  groupItems          EssentialGroupItem[]
 
   @@map("essentials")
 }

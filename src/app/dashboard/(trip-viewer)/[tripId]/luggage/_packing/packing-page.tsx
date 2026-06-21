@@ -1,47 +1,43 @@
-import { Box } from 'lucide-react';
+import { HydrationBoundary, dehydrate } from '@tanstack/react-query';
 import { notFound } from 'next/navigation';
-import React from 'react';
+import React, { Suspense } from 'react';
 
-import { Progress } from '../../../../../../components/ui/progress';
-import { getTripWithLuggagePacked } from './_data/fetchers';
-import { LuggagePackList } from './luggage-pack-list';
+import { getQueryClient } from '@/lib/query-client';
 
-export async function PackingPage({ tripId }: { tripId: string }) {
-	const trip = await getTripWithLuggagePacked(tripId);
+import LuggageLoading from '../loading';
+import { getLuggagePackingBoard } from './_data/fetchers';
+import { luggagePackingBoardKeys } from './_data/queries';
+import { LuggagePackingContent } from './page-wrapper';
+
+export function PackingPage({ tripId }: { tripId: string }) {
+	return (
+		<Suspense fallback={<LuggageLoading />}>
+			<PackingData tripId={tripId} />
+		</Suspense>
+	);
+}
+
+/**
+ * Streams the board: the page shell paints immediately while this server component
+ * prefetches into the query cache (using the direct DB loader as the queryFn) and
+ * hands the dehydrated cache to the client. The client island reads from that cache
+ * via useSuspenseQuery — it never calls its own fetch queryFn during initial render.
+ */
+async function PackingData({ tripId }: { tripId: string }) {
+	const queryClient = getQueryClient();
+	const [trip] = await Promise.all([
+		getLuggagePackingBoard(tripId),
+		queryClient.prefetchQuery({
+			queryKey: luggagePackingBoardKeys.board(tripId),
+			queryFn: () => getLuggagePackingBoard(tripId),
+		}),
+	]);
+
 	if (!trip) return notFound();
 
-	const packed = trip.luggageProvisions.reduce((prev, luggageProvision) => {
-		const isFull = luggageProvision.containerProvisions.every(
-			(containerProvision) => containerProvision.packed,
-		);
-
-		return prev + (isFull ? 1 : 0);
-	}, 0);
-
-	const toPack = trip.luggageProvisions.length;
-
 	return (
-		<>
-			<div className="mb-4 flex items-center gap-4">
-				<Box className="h-10 w-10" />
-				<div className="flex-1">
-					<h2 className="text-2xl font-bold">Luggage Packed</h2>
-					<p className="text-base text-neutral-600">
-						Mark the containers you've packed and secured into your luggage.
-					</p>
-				</div>
-			</div>
-			<div className="mb-4">
-				<Progress value={(packed / toPack) * 100} />
-				<p className="mt-2 text-neutral-600">
-					<span className="font-bold">
-						{packed} / {toPack}
-					</span>{' '}
-					of luggage ready
-				</p>
-			</div>
-
-			<LuggagePackList trip={trip} />
-		</>
+		<HydrationBoundary state={dehydrate(queryClient)}>
+			<LuggagePackingContent tripId={tripId} />
+		</HydrationBoundary>
 	);
 }

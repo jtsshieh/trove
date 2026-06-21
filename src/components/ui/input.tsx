@@ -4,6 +4,12 @@ import { Input as InputPrimitive } from '@base-ui/react/input';
 import { cn } from '@/lib/utils';
 
 function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
+	// Keep controlled inputs controlled for their whole lifetime: a form field can
+	// spread a `value` key that starts `undefined`, which otherwise flips the
+	// field uncontrolled→controlled on first edit (a React warning). Coerce a
+	// present-but-undefined value to ''. Inputs with no `value` key stay
+	// uncontrolled (defaultValue-driven) and are untouched.
+	const valueOverride = 'value' in props ? { value: props.value ?? '' } : {};
 	return (
 		<InputPrimitive
 			type={type}
@@ -13,6 +19,7 @@ function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
 				className,
 			)}
 			{...props}
+			{...valueOverride}
 		/>
 	);
 }

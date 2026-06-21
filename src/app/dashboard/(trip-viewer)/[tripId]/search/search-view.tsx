@@ -331,8 +331,8 @@ function SearchResultElement({
 	return (
 		<div
 			className={cn(
-				'group flex cursor-pointer select-none flex-row items-center gap-2 rounded-xl p-2 text-neutral-700 transition-all hover:bg-neutral-100 hover:text-neutral-950',
-				hovered && 'bg-neutral-100 text-neutral-950',
+				'group flex select-none flex-row items-center gap-2 rounded-xl p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
+				hovered && 'bg-muted text-foreground',
 			)}
 			onMouseEnter={onMouseEnter}
 			onClick={onSelect}

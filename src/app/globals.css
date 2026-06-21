@@ -3,6 +3,9 @@
 @import 'shadcn/tailwind.css';
 
 @custom-variant dark (&:is(.dark *));
+/* Hover-capable pointers only (so hover-reveal affordances don't get stuck
+   hidden on touch). Used widely as `hover-hover:group-hover/...:opacity-100`. */
+@custom-variant hover-hover (@media (hover: hover));
 
 :root {
 	--background: oklch(1 0 0);
@@ -23,6 +26,40 @@
 	--border: oklch(0.922 0 0);
 	--input: oklch(0.922 0 0);
 	--ring: oklch(0.708 0 0);
+
+	/* Accent — intentionally neutral (no colored accents). The "brand" role maps to
+	   near-black so primary action / current selection / drag drop-targets / focus
+	   read as black, matching the rest of the UI. */
+	--brand: oklch(0.205 0 0);
+	--brand-foreground: oklch(0.985 0 0);
+	--brand-subtle: oklch(0.97 0 0);
+	--ring-brand: oklch(0.205 0 0);
+
+	/* Second-neutral surfaces: panels/toolbars (panel) sit above a faintly
+	   recessed page canvas (surface-sunken) so white cards read as raised. */
+	--panel: oklch(0.972 0 0);
+	--panel-foreground: oklch(0.205 0 0);
+	--surface-sunken: oklch(0.98 0 0);
+
+	/* Motion tokens (Emil Kowalski standard). Strong custom curves; sub-300ms UI. */
+	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+	--ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+	--ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+	--dur-press: 140ms;
+	--dur-fast: 160ms;
+	--dur-popover: 180ms;
+	--dur-dropdown: 200ms;
+	--dur-modal: 240ms;
+	--dur-drawer: 320ms;
+	--dur-exit: 140ms;
+
+	/* Semantic z-index scale. */
+	--z-sticky: 10;
+	--z-overlay: 50;
+	--z-modal: 60;
+	--z-popover: 70;
+	--z-toast: 80;
+
 	--chart-1: oklch(0.87 0 0);
 	--chart-2: oklch(0.556 0 0);
 	--chart-3: oklch(0.439 0 0);
@@ -58,6 +95,16 @@
 	--border: oklch(1 0 0 / 10%);
 	--input: oklch(1 0 0 / 15%);
 	--ring: oklch(0.556 0 0);
+
+	--brand: oklch(0.922 0 0);
+	--brand-foreground: oklch(0.205 0 0);
+	--brand-subtle: oklch(0.269 0 0);
+	--ring-brand: oklch(0.708 0 0);
+
+	--panel: oklch(0.225 0 0);
+	--panel-foreground: oklch(0.985 0 0);
+	--surface-sunken: oklch(0.165 0 0);
+
 	--chart-1: oklch(0.87 0 0);
 	--chart-2: oklch(0.556 0 0);
 	--chart-3: oklch(0.439 0 0);
@@ -92,6 +139,13 @@
 	--color-border: var(--border);
 	--color-input: var(--input);
 	--color-ring: var(--ring);
+	--color-brand: var(--brand);
+	--color-brand-foreground: var(--brand-foreground);
+	--color-brand-subtle: var(--brand-subtle);
+	--color-ring-brand: var(--ring-brand);
+	--color-panel: var(--panel);
+	--color-panel-foreground: var(--panel-foreground);
+	--color-surface-sunken: var(--surface-sunken);
 	--color-chart-1: var(--chart-1);
 	--color-chart-2: var(--chart-2);
 	--color-chart-3: var(--chart-3);
@@ -107,6 +161,7 @@
 	--color-sidebar-ring: var(--sidebar-ring);
 
 	--font-sans: var(--font-sans);
+	--font-heading: var(--font-sans);
 
 	--radius-sm: calc(var(--radius) - 4px);
 	--radius-md: calc(var(--radius) - 2px);
@@ -120,5 +175,53 @@
 	}
 	body {
 		@apply bg-background text-foreground font-sans;
+	}
+	/* Native-app feel: interactive elements keep the default arrow cursor
+	   instead of the pointer hand. */
+	button,
+	[role='button'],
+	a,
+	label,
+	summary,
+	select,
+	[role='tab'],
+	[role='option'],
+	[role='menuitem'],
+	[role='switch'],
+	[role='checkbox'] {
+		cursor: default;
+	}
+	/* Native-app feel: text isn't selectable by default. Set directly on every
+	   element (not via inheritance, which WebKit applies unreliably for
+	   user-select). `:where()` keeps specificity at 0 so the opt-ins below win.
+	   Real text inputs — and anything tagged `.select-text` — stay selectable so
+	   typing and copy-out still work. */
+	*:where(:not(input):not(textarea):not([contenteditable='true'])) {
+		-webkit-user-select: none;
+		user-select: none;
+	}
+	input,
+	textarea,
+	[contenteditable='true'],
+	.select-text,
+	.select-text * {
+		-webkit-user-select: text;
+		user-select: text;
+	}
+}
+
+/*
+ * Respect a user's reduced-motion preference: collapse CSS transitions /
+ * tw-animate-css keyframes to near-instant so nothing slides, scales, or fades
+ * for users prone to motion sickness. (All app motion is CSS-based.)
+ */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
 	}
 }

@@ -24,18 +24,22 @@ import {
 import { Input } from '../../../../components/ui/input';
 import { toast } from 'sonner';
 
-import { changeUsername, deleteUser } from './_data/actions';
-import { UserDTO } from './_data/fetchers';
+import { changeUsername, deleteUser } from './_data/api';
+import type { UserDTO } from './_data/fetchers';
 
 export function UsernameCard({ user }: { user: UserDTO }) {
 	const [username, setUsername] = useState(user.username);
 	const [isPending, startTransition] = useTransition();
+	const router = useRouter();
 	const onSaveUsernameChange = () =>
 		startTransition(async () => {
 			const result = await changeUsername(username);
 			if (!result.success) {
 				toast.error('That username is taken. Choose another one.');
 			} else {
+				// Username is server-rendered + prop-drilled (nav, account page);
+				// refresh so those reflect the change (replaces revalidatePath('/')).
+				router.refresh();
 				toast.success(
 					`Your username has successfully been changed to ${username}`,
 				);
@@ -68,7 +72,7 @@ export function UsernameCard({ user }: { user: UserDTO }) {
 	);
 }
 
-export function DeleteAccountCard({ user }: { user: UserDTO }) {
+export function DeleteAccountCard() {
 	return (
 		<Card>
 			<CardHeader>

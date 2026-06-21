@@ -11,17 +11,18 @@ import {
 	X,
 } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-import { signOut } from '../../(auth)/_data/actions';
+import { signOut } from '../../(auth)/_data/api';
 import { Avatar, AvatarFallback } from '../../../components/ui/avatar';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
@@ -33,7 +34,7 @@ import {
 	SheetContent,
 	SheetTrigger,
 } from '../../../components/ui/sheet';
-import { UserDTO } from './account/_data/fetchers';
+import type { UserDTO } from './account/_data/fetchers';
 
 const navLinks = [
 	{ name: 'Home', icon: <Home />, href: '' },
@@ -44,6 +45,12 @@ const navLinks = [
 
 export function DashboardNav({ user }: { user: UserDTO }) {
 	const pathname = usePathname();
+	const router = useRouter();
+
+	const handleSignOut = async () => {
+		await signOut();
+		router.push('/sign-in');
+	};
 
 	return (
 		<nav className="flex w-full flex-col justify-between gap-0 px-4 py-2 sm:flex-row sm:gap-4">
@@ -58,7 +65,8 @@ export function DashboardNav({ user }: { user: UserDTO }) {
 							'flex justify-start gap-2',
 							[href, href.replace('/', '')].includes(
 								pathname.split('/')[2] ?? '',
-							) && 'bg-neutral-100',
+							) &&
+								'bg-brand-subtle text-brand hover:bg-brand-subtle hover:text-brand',
 						)}
 						nativeButton={false}
 						render={<Link href={`/dashboard${href}`} />}
@@ -78,7 +86,8 @@ export function DashboardNav({ user }: { user: UserDTO }) {
 					variant="ghost"
 					className={cn(
 						'flex justify-start gap-2',
-						(pathname.split('/')[2] ?? '') === '/account' && 'bg-neutral-100',
+						(pathname.split('/')[2] ?? '') === 'account' &&
+							'bg-brand-subtle text-brand hover:bg-brand-subtle hover:text-brand',
 					)}
 					nativeButton={false}
 					render={<Link href="/dashboard/account" />}
@@ -89,7 +98,7 @@ export function DashboardNav({ user }: { user: UserDTO }) {
 				<Button
 					variant="ghost"
 					className={cn('flex justify-start gap-2')}
-					onClick={() => signOut()}
+					onClick={handleSignOut}
 				>
 					<LogOut />
 					Sign out
@@ -98,13 +107,21 @@ export function DashboardNav({ user }: { user: UserDTO }) {
 			<DropdownMenu>
 				<DropdownMenuTrigger
 					render={
-						<Avatar className="hidden cursor-pointer select-none sm:block" />
+						<button
+							type="button"
+							aria-label="Account menu"
+							className="hidden rounded-full select-none sm:block"
+						/>
 					}
 				>
-					<AvatarFallback>:)</AvatarFallback>
+					<Avatar>
+						<AvatarFallback>:)</AvatarFallback>
+					</Avatar>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
-					<DropdownMenuLabel>{user.username}</DropdownMenuLabel>
+					<DropdownMenuGroup>
+						<DropdownMenuLabel>{user.username}</DropdownMenuLabel>
+					</DropdownMenuGroup>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
 						className="flex gap-2"
@@ -115,7 +132,7 @@ export function DashboardNav({ user }: { user: UserDTO }) {
 						Settings
 					</DropdownMenuItem>
 					<DropdownMenuSeparator />
-					<DropdownMenuItem className="flex gap-2" onClick={() => signOut()}>
+					<DropdownMenuItem className="flex gap-2" onClick={handleSignOut}>
 						<LogOut />
 						Sign out
 					</DropdownMenuItem>

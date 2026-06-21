@@ -1,7 +1,16 @@
+enum ProvisionSection {
+  Day
+  Universal
+  Backup
+}
+
 model ClothingProvision {
   id String @id @default(cuid())
 
-  day DateTime
+  section  ProvisionSection @default(Day)
+  day      DateTime?
+  dayOrder String           @map("day_order")
+
   packed Boolean @default(false)
 
   containerOrder String? @map("container_order")
@@ -12,19 +21,26 @@ model ClothingProvision {
   clothingId String   @map("clothing_id")
   clothing   Clothing @relation(fields: [clothingId], references: [id], onDelete: Cascade)
 
-  containerProvisionId String?                    @map("container_provision_id")
+  containerProvisionId String?             @map("container_provision_id")
   containerProvision   ContainerProvision? @relation(fields: [containerProvisionId], references: [id], onDelete: Cascade)
 
+  tripOutfitId String?     @map("trip_outfit_id")
+  tripOutfit   TripOutfit? @relation(fields: [tripOutfitId], references: [id], onDelete: SetNull)
 
+  @@index([tripId, section, day])
+  @@index([clothingId, tripId])
   @@map("clothing_provisions")
 }
 
 model EssentialProvision {
   id String @id @default(cuid())
 
+  section  ProvisionSection @default(Universal)
+  day      DateTime?
+  dayOrder String           @map("day_order")
+
   packed Boolean @default(false)
 
-  order String
   containerOrder String? @map("container_order")
 
   tripId String @map("trip_id")
@@ -33,9 +49,13 @@ model EssentialProvision {
   essentialId String    @map("essential_id")
   essential   Essential @relation(fields: [essentialId], references: [id], onDelete: Cascade)
 
-  containerProvisionId String?                    @map("container_provision_id")
+  containerProvisionId String?             @map("container_provision_id")
   containerProvision   ContainerProvision? @relation(fields: [containerProvisionId], references: [id], onDelete: Cascade)
 
+  tripEssentialGroupId String?             @map("trip_essential_group_id")
+  tripEssentialGroup   TripEssentialGroup? @relation(fields: [tripEssentialGroupId], references: [id], onDelete: SetNull)
+
+  @@index([tripId, section, day])
   @@map("essential_provisions")
 }
 
@@ -45,7 +65,7 @@ model ContainerProvision {
   tripId String @map("trip_id")
   trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
-  containerId String           @map("container_id")
+  containerId String    @map("container_id")
   container   Container @relation(fields: [containerId], references: [id], onDelete: Cascade)
 
   clothingProvisions  ClothingProvision[]
@@ -53,6 +73,8 @@ model ContainerProvision {
 
   luggageProvisionId String?           @map("luggage_provision_id")
   luggageProvision   LuggageProvision? @relation(fields: [luggageProvisionId], references: [id], onDelete: Cascade)
+
+  luggageOrder String? @map("luggage_order")
 
   packed Boolean @default(false)
 

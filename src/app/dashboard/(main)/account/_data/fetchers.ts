@@ -1,5 +1,3 @@
-'use server';
-
 import { jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -7,6 +5,7 @@ import { cache } from 'react';
 import { z } from 'zod';
 
 import { prisma } from '../../../../../lib/db.server';
+import { DisplayMode, PieceSize, ProvisionView } from '@/generated/prisma/enums';
 
 export interface UserDTO {
 	id: string;
@@ -45,6 +44,26 @@ export const getCurrentUserSafe = async () => {
 	if (!currentUser) redirect('/sign-in');
 	return currentUser;
 };
+
+export interface UserSettingsDTO {
+	displayMode: DisplayMode;
+	defaultProvisionView: ProvisionView;
+	pieceSize: PieceSize;
+}
+
+/** Display/view preferences, with defaults so a missing row needs no write. */
+export const getUserSettings = cache(async (): Promise<UserSettingsDTO> => {
+	const user = await getCurrentUserSafe();
+	const settings = await prisma.userSettings.findUnique({
+		where: { userId: user.id },
+	});
+	return {
+		displayMode: settings?.displayMode ?? DisplayMode.Both,
+		defaultProvisionView:
+			settings?.defaultProvisionView ?? ProvisionView.List,
+		pieceSize: settings?.pieceSize ?? PieceSize.Compact,
+	};
+});
 
 export const getUserPasskeys = async (userId: string) => {
 	return prisma.passkey.findMany({

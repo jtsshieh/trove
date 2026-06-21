@@ -1,55 +1,217 @@
 'use client';
 
 import { useRender } from '@base-ui/react/use-render';
-import * as React from 'react';
 import {
-	Controller,
-	ControllerProps,
-	FieldPath,
-	FieldValues,
-	FormProvider,
-	useFormContext,
-} from 'react-hook-form';
+	type AnyFieldApi,
+	type DeepKeys,
+	type ReactFormExtendedApi,
+	useForm,
+} from '@tanstack/react-form';
+import * as React from 'react';
+import type { z } from 'zod';
 
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
-const Form = FormProvider;
+/**
+ * A thin TanStack Form integration that preserves the shadcn-style
+ * Form/FormField/FormItem/FormLabel/FormControl/FormMessage API the codebase was
+ * built around (formerly backed by react-hook-form). Call sites change minimally:
+ * they keep `useAppForm({ schema, defaultValues })`, `<Form {...form}>`, and
+ * `<FormField control={form.control} name=… render={({ field }) => …} />`.
+ *
+ * Field render props expose an RHF-shaped `field` object — `{ name, value,
+ * onChange, onBlur, ref }` — adapted onto the TanStack field API. Values are
+ * always defined (default '' / null upstream) so Base UI inputs/selects never
+ * flip uncontrolled→controlled.
+ */
 
-type FormFieldContextValue<
-	TFieldValues extends FieldValues = FieldValues,
-	TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
-> = {
-	name: TName;
+type AnyForm = ReactFormExtendedApi<
+	any,
+	any,
+	any,
+	any,
+	any,
+	any,
+	any,
+	any,
+	any,
+	any,
+	any,
+	any
+>;
+
+/**
+ * The RHF-compatible surface every call site relies on.
+ *
+ * `TValues` is the always-defined form-state shape (may be wider than the schema
+ * input — e.g. `null` for an as-yet-unselected required enum). `TOut` is the
+ * parsed/validated output handed to `handleSubmit`'s callback.
+ */
+export interface AppForm<TValues, TOut = TValues> {
+	/** The underlying TanStack form instance (used by `FormField`). */
+	tanstack: AnyForm;
+	/** Kept for `control={form.control}` call sites; resolves to `tanstack`. */
+	control: AnyForm;
+	handleSubmit: (
+		onValid: (values: TOut) => unknown,
+	) => (event?: React.FormEvent) => void;
+	reset: (values?: Partial<TValues>) => void;
+	watch: <K extends keyof TValues>(name: K) => TValues[K];
+	getValues: () => TValues;
+	setValue: <K extends keyof TValues>(name: K, value: TValues[K]) => void;
+}
+
+export function useAppForm<
+	TSchema extends z.ZodType,
+	TValues extends Record<string, unknown> = z.input<TSchema>,
+>(opts: {
+	schema: TSchema;
+	defaultValues: TValues;
+}): AppForm<TValues, z.output<TSchema>> {
+	type TOut = z.output<TSchema>;
+
+	// Keep a stable reference to the defaults so `reset()` (no args) restores them.
+	const defaultsRef = React.useRef(opts.defaultValues);
+	defaultsRef.current = opts.defaultValues;
+
+	const tanstack = useForm({
+		defaultValues: opts.defaultValues,
+		// zod schemas implement the Standard Schema interface, which TanStack Form
+		// accepts directly as a field/form validator.
+		validators: { onSubmit: opts.schema as never },
+	}) as unknown as AnyForm;
+
+	return React.useMemo<AppForm<TValues, TOut>>(
+		() => ({
+			tanstack,
+			control: tanstack,
+			handleSubmit: (onValid) => (event) => {
+				event?.preventDefault();
+				event?.stopPropagation();
+				void tanstack.handleSubmit().then(() => {
+					if (tanstack.state.isValid) {
+						onValid(tanstack.state.values as TOut);
+					}
+				});
+			},
+			reset: (values) => {
+				tanstack.reset((values ?? defaultsRef.current) as TValues);
+			},
+			watch: (name) => tanstack.getFieldValue(name as never) as never,
+			getValues: () => tanstack.state.values as TValues,
+			setValue: (name, value) => {
+				tanstack.setFieldValue(name as never, value as never);
+			},
+		}),
+		[tanstack],
+	);
+}
+
+const FormContext = React.createContext<AnyForm | null>(null);
+
+/**
+ * Wraps a form. Spread the `useAppForm` result onto it (`<Form {...form}>`); the
+ * provider reads the `tanstack` key.
+ */
+function Form({
+	tanstack,
+	children,
+}: AppForm<any> & { children: React.ReactNode }) {
+	return (
+		<FormContext.Provider value={tanstack}>{children}</FormContext.Provider>
+	);
+}
+
+type FormFieldContextValue = {
+	name: string;
+	error: string | undefined;
 };
 
 const FormFieldContext = React.createContext<FormFieldContextValue>(
 	{} as FormFieldContextValue,
 );
 
-const FormField = <
-	TFieldValues extends FieldValues = FieldValues,
-	TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
->({
-	...props
-}: ControllerProps<TFieldValues, TName>) => {
+/** The RHF-shaped field object handed to `FormField`'s `render`. */
+interface RenderField {
+	name: string;
+	value: any;
+	onChange: (eventOrValue: any) => void;
+	onBlur: () => void;
+	ref: React.Ref<any>;
+}
+
+/** Reduces a TanStack field's error list to a single message string. */
+function firstErrorMessage(errors: unknown): string | undefined {
+	if (!Array.isArray(errors) || errors.length === 0) return undefined;
+	const first = errors[0];
+	if (first == null) return undefined;
+	if (typeof first === 'string') return first;
+	if (typeof first === 'object' && 'message' in first) {
+		return String((first as { message: unknown }).message);
+	}
+	return String(first);
+}
+
+function FormField({
+	control,
+	name,
+	render,
+}: {
+	// Accepted for call-site parity (`control={form.control}`); the field reads
+	// the form from context, so this is only used as a fallback.
+	control?: AnyForm;
+	name: string;
+	render: (props: { field: RenderField }) => React.ReactElement;
+}) {
+	const ctxForm = React.useContext(FormContext);
+	const form = ctxForm ?? control;
+	if (!form) {
+		throw new Error('<FormField> must be used within a <Form>');
+	}
+
+	const FieldComponent = form.Field;
+
 	return (
-		<FormFieldContext.Provider value={{ name: props.name }}>
-			<Controller {...props} />
-		</FormFieldContext.Provider>
+		<FieldComponent name={name}>
+			{(fieldApi: AnyFieldApi) => {
+				const field: RenderField = {
+					name: fieldApi.name,
+					value: fieldApi.state.value,
+					onChange: (eventOrValue) => {
+						const next =
+							eventOrValue &&
+							typeof eventOrValue === 'object' &&
+							'target' in eventOrValue
+								? (eventOrValue.target as HTMLInputElement).value
+								: eventOrValue;
+						fieldApi.handleChange(next);
+					},
+					onBlur: () => fieldApi.handleBlur(),
+					ref: () => {},
+				};
+				const error = firstErrorMessage(fieldApi.state.meta.errors);
+				return (
+					<FormFieldContext.Provider value={{ name, error }}>
+						{render({ field })}
+					</FormFieldContext.Provider>
+				);
+			}}
+		</FieldComponent>
 	);
+}
+
+type FormItemContextValue = {
+	id: string;
 };
 
-const useFormField = () => {
+const FormItemContext = React.createContext<FormItemContextValue>(
+	{} as FormItemContextValue,
+);
+
+function useFormField() {
 	const fieldContext = React.useContext(FormFieldContext);
 	const itemContext = React.useContext(FormItemContext);
-	const { getFieldState, formState } = useFormContext();
-
-	const fieldState = getFieldState(fieldContext.name, formState);
-
-	if (!fieldContext) {
-		throw new Error('useFormField should be used within <FormField>');
-	}
 
 	const { id } = itemContext;
 
@@ -59,17 +221,9 @@ const useFormField = () => {
 		formItemId: `${id}-form-item`,
 		formDescriptionId: `${id}-form-item-description`,
 		formMessageId: `${id}-form-item-message`,
-		...fieldState,
+		error: fieldContext.error,
 	};
-};
-
-type FormItemContextValue = {
-	id: string;
-};
-
-const FormItemContext = React.createContext<FormItemContextValue>(
-	{} as FormItemContextValue,
-);
+}
 
 function FormItem({ className, ...props }: React.ComponentProps<'div'>) {
 	const id = React.useId();
@@ -147,7 +301,7 @@ function FormMessage({
 	...props
 }: React.ComponentProps<'p'>) {
 	const { error, formMessageId } = useFormField();
-	const body = error ? String(error?.message) : children;
+	const body = error ? String(error) : children;
 
 	if (!body) {
 		return null;
@@ -165,6 +319,7 @@ function FormMessage({
 	);
 }
 
+export type { DeepKeys };
 export {
 	useFormField,
 	Form,

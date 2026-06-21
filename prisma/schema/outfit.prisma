@@ -1,0 +1,56 @@
+// Outfit = a reusable, user-owned template (a named set of clothing).
+// TripOutfit = an outfit instance placed on a specific day of a trip. It may
+// originate from a template (sourceOutfit) or be created ad-hoc (sourceOutfit
+// null). Assigning a template snapshots its items into ClothingProvisions, so
+// editing a template never retro-edits days it was already placed on.
+
+model Outfit {
+  id String @id @default(cuid())
+
+  name  String
+  order String
+
+  imageKey String? @map("image_key")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  items       OutfitItem[]
+  tripOutfits TripOutfit[]
+
+  @@map("outfits")
+}
+
+model OutfitItem {
+  id String @id @default(cuid())
+
+  order String
+
+  outfitId String @map("outfit_id")
+  outfit   Outfit @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+
+  clothingId String   @map("clothing_id")
+  clothing   Clothing @relation(fields: [clothingId], references: [id], onDelete: Cascade)
+
+  @@unique([outfitId, clothingId])
+  @@map("outfit_items")
+}
+
+model TripOutfit {
+  id String @id @default(cuid())
+
+  name  String?
+  day   DateTime
+  order String
+
+  tripId String @map("trip_id")
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  sourceOutfitId String? @map("source_outfit_id")
+  sourceOutfit   Outfit? @relation(fields: [sourceOutfitId], references: [id], onDelete: SetNull)
+
+  clothingProvisions ClothingProvision[]
+
+  @@index([tripId, day])
+  @@map("trip_outfits")
+}

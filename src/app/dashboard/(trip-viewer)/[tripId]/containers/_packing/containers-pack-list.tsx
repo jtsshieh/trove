@@ -1,3 +1,5 @@
+'use client';
+
 import type {
 	Clothing,
 	ClothingProvision,
@@ -7,31 +9,31 @@ import type {
 	EssentialProvision,
 } from '@/generated/prisma/client';
 import { ContainerType } from '@/generated/prisma/enums';
+import { Box, CheckCircle2 } from 'lucide-react';
 import React from 'react';
 
-import { EmptyList } from '../../../../../../components/empty-list';
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '../../../../../../components/ui/card';
-import { Progress } from '../../../../../../components/ui/progress';
-import { generateClothingName } from '../../../../../../lib/generate-clothing-name';
-import { getTripWithContainersPacked } from './_data/fetchers';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ItemDisplay } from '@/components/ui/item-display';
+import { Card, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { generateClothingName } from '@/lib/generate-clothing-name';
+import { cn } from '@/lib/utils';
+
+import type { ContainerPackingBoard } from './_data/fetchers';
 import { ClothingPackItem, EssentialPackItem } from './pack-items';
 
 interface ContainerProvisionListProps {
-	trip: NonNullable<Awaited<ReturnType<typeof getTripWithContainersPacked>>>;
+	tripId: string;
+	trip: ContainerPackingBoard;
 }
 
-export function ContainerPackList({ trip }: ContainerProvisionListProps) {
+export function ContainerPackList({ tripId, trip }: ContainerProvisionListProps) {
 	if (trip.containerProvisions.length === 0) {
 		return (
-			<EmptyList
-				main="You have not added any containers to this trip"
-				sub="You can start assigning your provisioned items as soon as you add a container."
+			<EmptyState
+				icon={<Box />}
+				title="No containers to pack yet"
+				description="Add containers to this trip and assign items to them, then come back here to pack."
 			/>
 		);
 	}
@@ -41,6 +43,7 @@ export function ContainerPackList({ trip }: ContainerProvisionListProps) {
 			{trip.containerProvisions.map((containerProvision) => (
 				<ContainerPackCard
 					key={containerProvision.id}
+					tripId={tripId}
 					containerProvision={containerProvision}
 				/>
 			))}
@@ -49,68 +52,98 @@ export function ContainerPackList({ trip }: ContainerProvisionListProps) {
 }
 
 function ContainerPackCard({
+	tripId,
 	containerProvision,
 }: {
+	tripId: string;
 	containerProvision: ContainerProvision & {
 		container: Container;
 		clothingProvisions: (ClothingProvision & { clothing: Clothing })[];
 		essentialProvisions: (EssentialProvision & { essential: Essential })[];
 	};
 }) {
-	const containerType =
-		containerProvision.container.type === ContainerType.Clothes
-			? 'clothes'
-			: 'essentials';
+	const isClothes =
+		containerProvision.container.type === ContainerType.Clothes;
 
-	const provisions =
-		containerType === 'clothes'
-			? containerProvision.clothingProvisions
-			: containerProvision.essentialProvisions;
+	const provisions = isClothes
+		? containerProvision.clothingProvisions
+		: containerProvision.essentialProvisions;
+
 	const packed = provisions.reduce(
 		(prev, provision) => (provision.packed ? prev + 1 : prev),
 		0,
 	);
 	const toPack = provisions.length;
+	const complete = toPack > 0 && packed === toPack;
 
 	return (
-		<Card>
-			<CardHeader className="flex flex-row items-center gap-2 space-y-0">
-				<div className="flex-1">
-					<CardTitle>{containerProvision.container.name}</CardTitle>
-					<CardDescription>{containerProvision.container.type}</CardDescription>
+		<Card
+			data-complete={complete || undefined}
+			className="transition-colors duration-[var(--dur-fast)] data-[complete]:ring-ring-brand/40"
+		>
+			<CardContent className="flex flex-col gap-3">
+				<div className="flex items-center gap-3">
+					<ItemDisplay
+						size="panel"
+						mode="PictureOnly"
+						name={containerProvision.container.name}
+						imageKey={containerProvision.container.imageKey}
+						fallbackIcon={<Box />}
+					/>
+					<div className="min-w-0 flex-1">
+						<p className="truncate font-medium">
+							{containerProvision.container.name}
+						</p>
+						<p className="text-xs text-muted-foreground">
+							{containerProvision.container.type}
+						</p>
+					</div>
+					<div className="flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground tabular-nums">
+						{complete && <CheckCircle2 className="size-4 text-brand" />}
+						<span className={cn(complete && 'font-medium text-brand')}>
+							{packed}/{toPack}
+						</span>
+					</div>
 				</div>
-				<div>
-					<Progress value={(packed / toPack) * 100} />
-					<p className="mt-1 text-neutral-600">
-						<span className="text-sm font-bold">
-							{packed} / {toPack}
-						</span>{' '}
-						of provisions packed
+
+				<Progress
+					value={toPack === 0 ? 0 : (packed / toPack) * 100}
+					className="h-1.5"
+				/>
+
+				{toPack === 0 ? (
+					<p className="rounded-md bg-surface-sunken px-3 py-4 text-center text-xs text-muted-foreground">
+						No items assigned to this container yet.
 					</p>
-				</div>
-			</CardHeader>
-			<CardContent className="flex flex-col">
-				{containerType === 'clothes'
-					? containerProvision.clothingProvisions.map(
-							({ clothing, id, packed }) => (
-								<ClothingPackItem
-									key={id}
-									clothingProvisionId={id}
-									clothingName={generateClothingName(clothing)}
-									packed={packed}
-								/>
-							),
-						)
-					: containerProvision.essentialProvisions.map(
-							({ essential, id, packed }) => (
-								<EssentialPackItem
-									key={id}
-									essentialProvisionId={id}
-									essentialName={essential.name}
-									packed={packed}
-								/>
-							),
-						)}
+				) : (
+					<div className="flex flex-col">
+						{isClothes
+							? containerProvision.clothingProvisions.map(
+									({ clothing, id, packed }) => (
+										<ClothingPackItem
+											key={id}
+											tripId={tripId}
+											clothingProvisionId={id}
+											clothingName={generateClothingName(clothing)}
+											imageKey={clothing.imageKey}
+											packed={packed}
+										/>
+									),
+								)
+							: containerProvision.essentialProvisions.map(
+									({ essential, id, packed }) => (
+										<EssentialPackItem
+											key={id}
+											tripId={tripId}
+											essentialProvisionId={id}
+											essentialName={essential.name}
+											imageKey={essential.imageKey}
+											packed={packed}
+										/>
+									),
+								)}
+					</div>
+				)}
 			</CardContent>
 		</Card>
 	);

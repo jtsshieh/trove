@@ -6,6 +6,10 @@ model Container {
   name String
   type ContainerType
 
+  quantity Int @default(1)
+
+  imageKey String? @map("image_key")
+
   userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -20,6 +24,10 @@ model Luggage {
   order String
 
   name String
+
+  quantity Int @default(1)
+
+  imageKey String? @map("image_key")
 
   userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)

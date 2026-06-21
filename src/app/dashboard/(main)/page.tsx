@@ -3,16 +3,13 @@ import React, { Suspense } from 'react';
 
 import { getQueryClient } from '@/lib/query-client';
 
+import { getAllTrips } from '../(trip-viewer)/[tripId]/_data/fetchers';
 import { tripsQueryOptions } from '../(trip-viewer)/[tripId]/_data/queries';
 import { TripListContent } from './page-wrapper';
 import { CreateTripDialog } from './trip-dialogs';
 import { TripListLoading } from './trip-list';
 
 export default function TripsPage() {
-	const queryClient = getQueryClient();
-	// Non-blocking: kick off the query without awaiting so the page can stream.
-	void queryClient.prefetchQuery(tripsQueryOptions);
-
 	return (
 		<div className="flex w-full flex-1 justify-center">
 			<div className="flex w-full max-w-screen-lg flex-1 flex-col">
@@ -25,12 +22,29 @@ export default function TripsPage() {
 					</div>
 					<CreateTripDialog />
 				</div>
-				<HydrationBoundary state={dehydrate(queryClient)}>
-					<Suspense fallback={<TripListLoading />}>
-						<TripListContent />
-					</Suspense>
-				</HydrationBoundary>
+				<Suspense fallback={<TripListLoading />}>
+					<TripsData />
+				</Suspense>
 			</div>
 		</div>
+	);
+}
+
+/**
+ * Streams the trips list: prefetches with the direct DB loader as the queryFn
+ * (the client queryFn is a relative fetch that can't run on the server), then
+ * hands the dehydrated cache to the client.
+ */
+async function TripsData() {
+	const queryClient = getQueryClient();
+	await queryClient.prefetchQuery({
+		queryKey: tripsQueryOptions.queryKey,
+		queryFn: getAllTrips,
+	});
+
+	return (
+		<HydrationBoundary state={dehydrate(queryClient)}>
+			<TripListContent />
+		</HydrationBoundary>
 	);
 }

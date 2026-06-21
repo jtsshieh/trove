@@ -1,51 +1,100 @@
+import { CheckCircle2, Luggage } from 'lucide-react';
 import React from 'react';
 
-import { EmptyList } from '../../../../../../components/empty-list';
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from '../../../../../../components/ui/card';
-import { getTripWithLuggagePacked } from './_data/fetchers';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ItemDisplay } from '@/components/ui/item-display';
+import { Card, CardContent } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
+
+import type { LuggagePackingBoard } from './_data/api';
 import { ContainerPackItem } from './container-item';
 
 interface LuggagePackListProps {
-	trip: NonNullable<Awaited<ReturnType<typeof getTripWithLuggagePacked>>>;
+	tripId: string;
+	trip: LuggagePackingBoard;
 }
-export function LuggagePackList({ trip }: LuggagePackListProps) {
+
+export function LuggagePackList({ tripId, trip }: LuggagePackListProps) {
 	if (trip.luggageProvisions.length === 0) {
 		return (
-			<EmptyList
-				main="You have not added any luggage to this trip"
-				sub="You can start assigning your containers as soon as you add a luggage."
+			<EmptyState
+				icon={<Luggage />}
+				title="No luggage to pack yet"
+				description="Add luggage to this trip and assign containers to it, then come back here to pack."
 			/>
 		);
 	}
 
 	return (
 		<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-			{trip.luggageProvisions.map((luggageProvision) => (
-				<Card key={luggageProvision.id}>
-					<CardHeader className="flex flex-row items-center gap-2 space-y-0">
-						<div className="flex-1">
-							<CardTitle>{luggageProvision.luggage.name}</CardTitle>
-						</div>
-					</CardHeader>
-					<CardContent className="flex flex-col">
-						{luggageProvision.containerProvisions.map(
-							({ id, container, packed }) => (
-								<ContainerPackItem
-									key={id}
-									containerProvisionId={id}
-									containerName={container.name}
-									packed={packed}
+			{trip.luggageProvisions.map((luggageProvision) => {
+				const containers = luggageProvision.containerProvisions;
+				const packed = containers.reduce(
+					(prev, cp) => (cp.packed ? prev + 1 : prev),
+					0,
+				);
+				const toPack = containers.length;
+				const complete = toPack > 0 && packed === toPack;
+
+				return (
+					<Card
+						key={luggageProvision.id}
+						data-complete={complete || undefined}
+						className="transition-colors duration-[var(--dur-fast)] data-[complete]:ring-ring-brand/40"
+					>
+						<CardContent className="flex flex-col gap-3">
+							<div className="flex items-center gap-3">
+								<ItemDisplay
+									size="panel"
+									mode="PictureOnly"
+									name={luggageProvision.luggage.name}
+									imageKey={luggageProvision.luggage.imageKey}
+									fallbackIcon={<Luggage />}
 								/>
-							),
-						)}
-					</CardContent>
-				</Card>
-			))}
+								<div className="min-w-0 flex-1">
+									<p className="truncate font-medium">
+										{luggageProvision.luggage.name}
+									</p>
+									<p className="text-xs text-muted-foreground tabular-nums">
+										{toPack} {toPack === 1 ? 'container' : 'containers'}
+									</p>
+								</div>
+								<div className="flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground tabular-nums">
+									{complete && <CheckCircle2 className="size-4 text-brand" />}
+									<span className={cn(complete && 'font-medium text-brand')}>
+										{packed}/{toPack}
+									</span>
+								</div>
+							</div>
+
+							<Progress
+								value={toPack === 0 ? 0 : (packed / toPack) * 100}
+								className="h-1.5"
+							/>
+
+							{toPack === 0 ? (
+								<p className="rounded-md bg-surface-sunken px-3 py-4 text-center text-xs text-muted-foreground">
+									No containers assigned to this bag yet.
+								</p>
+							) : (
+								<div className="flex flex-col">
+									{containers.map(({ id, container, packed }) => (
+										<ContainerPackItem
+											key={id}
+											tripId={tripId}
+											containerProvisionId={id}
+											containerName={container.name}
+											imageKey={container.imageKey}
+											packed={packed}
+										/>
+									))}
+								</div>
+							)}
+						</CardContent>
+					</Card>
+				);
+			})}
 		</div>
 	);
 }

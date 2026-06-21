@@ -1,8 +1,12 @@
 import { queryOptions } from '@tanstack/react-query';
 
-import { fetchAllLuggage } from './actions';
+import { fetchLuggage } from './api';
+
+export const luggageKeys = {
+	luggage: ['luggage'] as const,
+};
 
 export const luggageQueryOptions = queryOptions({
-	queryKey: ['luggage'],
-	queryFn: fetchAllLuggage,
+	queryKey: luggageKeys.luggage,
+	queryFn: fetchLuggage,
 });

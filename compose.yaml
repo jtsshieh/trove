@@ -33,6 +33,37 @@ services:
       timeout: 5s
       retries: 10
 
+  # MinIO — S3-compatible object storage for item images.
+  minio:
+    image: minio/minio
+    restart: unless-stopped
+    command: ['server', '/data', '--console-address', ':9001']
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-minioadmin}
+    ports:
+      - '127.0.0.1:9000:9000'
+      - '127.0.0.1:9001:9001'
+    volumes:
+      - miniodata:/data
+
+  # One-shot: create the images bucket once MinIO is reachable.
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      - minio
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-minioadmin}
+      S3_BUCKET: ${S3_BUCKET:-packing-images}
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 \"$${MINIO_ROOT_USER}\" \"$${MINIO_ROOT_PASSWORD}\"; do echo waiting for minio; sleep 1; done;
+      mc mb -p local/\"$${S3_BUCKET}\" || true;
+      exit 0;
+      "
+
 volumes:
   pgdata:
   redisdata:
+  miniodata:

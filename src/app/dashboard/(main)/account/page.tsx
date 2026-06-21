@@ -16,7 +16,7 @@ export default async function UserSettingsPage() {
 				<div className="flex w-full flex-col gap-4">
 					<UsernameCard user={user} />
 					<AuthCard />
-					<DeleteAccountCard user={user} />
+					<DeleteAccountCard />
 				</div>
 			</div>
 		</div>

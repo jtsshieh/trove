@@ -1,0 +1,26 @@
+enum DisplayMode {
+  TextOnly
+  PictureOnly
+  Both
+}
+
+enum ProvisionView {
+  List
+  Calendar
+}
+
+enum PieceSize {
+  Compact
+  Large
+}
+
+model UserSettings {
+  userId String @id @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  displayMode          DisplayMode   @default(Both) @map("display_mode")
+  defaultProvisionView ProvisionView @default(List) @map("default_provision_view")
+  pieceSize            PieceSize     @default(Compact) @map("piece_size")
+
+  @@map("user_settings")
+}

@@ -1,58 +1,47 @@
-import type { Essential, EssentialProvision } from '@/generated/prisma/client';
-import { EssentialCategory } from '@/generated/prisma/enums';
-import { PillBottle } from 'lucide-react';
+import { HydrationBoundary, dehydrate } from '@tanstack/react-query';
 import { notFound } from 'next/navigation';
-import React from 'react';
+import { Suspense } from 'react';
 
-import { getAllEssentials } from '../../../(main)/essentials/_data/fetchers';
-import { getTripWithEssentialProvisions } from './_data/fetchers';
-import { CreateEssentialProvisionDialog } from './create-essential-provision-dialog';
-import { EssentialProvisionList } from './essential-provision-list';
+import { getQueryClient } from '@/lib/query-client';
 
-export default async function EssentialProvisionsPage(props: {
+import EssentialsLoading from './loading';
+import { EssentialsBoardContent } from './page-wrapper';
+import { getEssentialsBoardData } from './_data/fetchers';
+import { essentialsBoardKeys } from './_data/queries';
+
+export default async function EssentialsPage(props: {
 	params: Promise<{ tripId: string }>;
 }) {
-	const params = await props.params;
-	const trip = await getTripWithEssentialProvisions(params.tripId);
-
-	if (!trip) return notFound();
-
-	const essentials = await getAllEssentials();
-
-	const groups: Record<
-		EssentialCategory,
-		(EssentialProvision & { essential: Essential })[]
-	> = {
-		[EssentialCategory.Toiletry]: [],
-		[EssentialCategory.Document]: [],
-		[EssentialCategory.Electronic]: [],
-	};
-
-	trip.essentialProvisions.forEach((provision) => {
-		groups[provision.essential.category].push(provision);
-	});
-
-	const usedEssentials = trip.essentialProvisions.map(
-		(provision) => provision.essential.id,
-	);
+	const { tripId } = await props.params;
 
 	return (
-		<>
-			<div className="mb-4 flex items-center gap-4">
-				<PillBottle className="h-10 w-10" />
-				<div className="flex-1">
-					<h2 className="text-2xl font-bold">Essentials Provisions</h2>
-					<p className="text-base text-neutral-600">
-						Provision your essentials to bring on this trip.
-					</p>
-				</div>
-				<CreateEssentialProvisionDialog
-					trip={trip}
-					essentials={essentials}
-					usedEssentials={usedEssentials}
-				/>
-			</div>
-			<EssentialProvisionList groups={groups} />
-		</>
+		<Suspense fallback={<EssentialsLoading />}>
+			<EssentialsData tripId={tripId} />
+		</Suspense>
+	);
+}
+
+/**
+ * Streams the board: the page shell paints immediately while this server component
+ * prefetches into the query cache (using the direct DB loader as the queryFn) and
+ * hands the dehydrated cache to the client. The client board reads from that cache
+ * via useSuspenseQuery — it never calls its own fetch queryFn during initial render.
+ */
+async function EssentialsData({ tripId }: { tripId: string }) {
+	const queryClient = getQueryClient();
+	const [data] = await Promise.all([
+		getEssentialsBoardData(tripId),
+		queryClient.prefetchQuery({
+			queryKey: essentialsBoardKeys.board(tripId),
+			queryFn: () => getEssentialsBoardData(tripId),
+		}),
+	]);
+
+	if (!data) return notFound();
+
+	return (
+		<HydrationBoundary state={dehydrate(queryClient)}>
+			<EssentialsBoardContent tripId={tripId} />
+		</HydrationBoundary>
 	);
 }

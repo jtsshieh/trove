@@ -1,6 +1,5 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
 import {
 	WebAuthnError,
 	browserSupportsWebAuthn,
@@ -12,7 +11,6 @@ import { AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState, useTransition } from 'react';
-import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { Alert, AlertDescription } from '../../../components/ui/alert';
@@ -32,6 +30,7 @@ import {
 	FormItem,
 	FormLabel,
 	FormMessage,
+	useAppForm,
 } from '../../../components/ui/form';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
@@ -40,15 +39,16 @@ import {
 	getPasskeyOptions,
 	signInWithPassword,
 	verifyAuthentication,
-} from '../_data/actions';
+} from '../_data/api';
 
 const formSchema = z.object({
 	username: z.string(),
 });
 
 export default function SigninPage() {
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+	const form = useAppForm({
+		schema: formSchema,
+		defaultValues: { username: '' },
 	});
 	const router = useRouter();
 	const [isPending, startTransition] = useTransition();
@@ -241,8 +241,8 @@ const passwordSchema = z.object({
 });
 
 function PasswordForm({ username }: { username: string }) {
-	const form = useForm<z.infer<typeof passwordSchema>>({
-		resolver: zodResolver(passwordSchema),
+	const form = useAppForm({
+		schema: passwordSchema,
 		defaultValues: {
 			password: '',
 		},

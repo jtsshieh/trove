@@ -13,16 +13,16 @@ const routes = [
 export function PackingGearNav() {
 	const pathname = usePathname();
 	return (
-		<div className="flex flex-col gap-1 rounded-xl bg-neutral-100 p-1 sm:flex-row">
+		<div className="flex flex-row gap-1 self-start rounded-xl bg-panel p-1">
 			{routes.map(({ name, href }) => (
 				<Button
 					key={name}
 					variant="secondary"
 					size="flexible"
 					className={cn(
-						'bg-transparent px-3 py-1.5 text-sm font-medium hover:bg-white',
+						'bg-transparent px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-card hover:text-foreground',
 						[href, href.replace('/', '')].includes(pathname.split('/')[3]) &&
-							'bg-white',
+							'bg-card text-foreground shadow-sm',
 					)}
 					nativeButton={false}
 					render={<Link href={`/dashboard/packing-gear${href}`} />}

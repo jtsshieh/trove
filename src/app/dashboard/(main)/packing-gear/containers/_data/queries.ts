@@ -1,8 +1,12 @@
 import { queryOptions } from '@tanstack/react-query';
 
-import { fetchAllContainers } from './actions';
+import { fetchContainers } from './api';
+
+export const containerKeys = {
+	all: ['containers'] as const,
+};
 
 export const containersQueryOptions = queryOptions({
-	queryKey: ['containers'],
-	queryFn: fetchAllContainers,
+	queryKey: containerKeys.all,
+	queryFn: fetchContainers,
 });

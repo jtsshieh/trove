@@ -1,6 +1,5 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
 import type { Trip } from '@/generated/prisma/client';
 import { format } from 'date-fns';
 import { CalendarIcon, Plus } from 'lucide-react';
@@ -11,16 +10,12 @@ import React, {
 	ReactNode,
 	useEffect,
 	useState,
-	useTransition,
 } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-
 import {
-	createTrip,
-	deleteTrip,
-	editTrip,
-} from '../(trip-viewer)/[tripId]/_data/actions';
+	useCreateTrip,
+	useDeleteTrip,
+	useEditTrip,
+} from '../(trip-viewer)/[tripId]/_data/mutations';
 import { createTripSchema } from '../(trip-viewer)/[tripId]/_data/schemas';
 import { Button } from '../../../components/ui/button';
 import { Calendar } from '../../../components/ui/calendar';
@@ -40,6 +35,7 @@ import {
 	FormItem,
 	FormLabel,
 	FormMessage,
+	useAppForm,
 } from '../../../components/ui/form';
 import { Input } from '../../../components/ui/input';
 import {
@@ -63,18 +59,21 @@ export function BaseCreateEditTripForm(
 	const { type } = props;
 	const router = useRouter();
 
-	const [isPending, startTransition] = useTransition();
+	const createTrip = useCreateTrip();
+	const editTrip = useEditTrip();
+	const isPending = createTrip.isPending || editTrip.isPending;
 
 	const ContentWrapper = props.ContentWrapper ?? Fragment;
 	const SubmitWrapper = props.SubmitWrapper ?? Fragment;
 
-	const form = useForm<z.infer<typeof createTripSchema>>({
-		resolver: zodResolver(createTripSchema),
+	const form = useAppForm({
+		schema: createTripSchema,
 		defaultValues: {
-			name: type === 'edit' ? props.trip.name : undefined,
+			name: type === 'edit' ? props.trip.name : '',
 			date: {
-				from: type === 'edit' ? props.trip.start : undefined,
-				to: type === 'edit' ? props.trip.end : undefined,
+				from:
+					type === 'edit' ? props.trip.start : (undefined as Date | undefined),
+				to: type === 'edit' ? props.trip.end : (undefined as Date | undefined),
 			},
 		},
 	});
@@ -91,21 +90,19 @@ export function BaseCreateEditTripForm(
 		type === 'edit' ? [props.trip.name, props.trip.start, props.trip.end] : [],
 	);
 
-	const onSubmit = form.handleSubmit((data) =>
-		startTransition(async () => {
+	const onSubmit = form.handleSubmit(async (data) => {
+		try {
 			if (type === 'create') {
-				const result = await createTrip(data);
-				if (result?.data) {
-					router.push(`/dashboard/${result.data.tripId}`);
-				} else {
-					throw new Error(':(');
-				}
+				const trip = await createTrip.mutateAsync(data);
+				router.push(`/dashboard/${trip.id}`);
 			} else {
-				await editTrip(props.trip.id, data);
-				props.onSubmit ? props.onSubmit() : void 0;
+				await editTrip.mutateAsync({ id: props.trip.id, input: data });
+				props.onSubmit?.();
 			}
-		}),
-	);
+		} catch {
+			// onError toast already shown; keep the dialog open for a retry.
+		}
+	});
 	return (
 		<Form {...form}>
 			<form onSubmit={onSubmit}>
@@ -156,17 +153,43 @@ export function BaseCreateEditTripForm(
 												<CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
 											</Button>
 										</PopoverTrigger>
-										<PopoverContent className="w-auto p-0" align="start">
+										<PopoverContent
+											className="flex w-auto flex-col p-0"
+											align="start"
+										>
 											<Calendar
 												mode="range"
 												defaultMonth={field.value?.from}
 												numberOfMonths={2}
 												selected={field.value}
-												onSelect={(e) => {
-													field.onChange(e);
-													if (e?.to && e?.from) setCalendarOpen(false);
+												onSelect={(range) => {
+													field.onChange(range);
+													// react-day-picker sets `to = from` on the first
+													// click, so a single click is NOT a deliberate range.
+													// Only auto-close once the user has picked two
+													// DISTINCT endpoints; otherwise keep the popover open
+													// so they can choose an end day (or confirm a
+													// single-day trip with Done below).
+													if (
+														range?.from &&
+														range?.to &&
+														range.from.getTime() !== range.to.getTime()
+													) {
+														setCalendarOpen(false);
+													}
 												}}
 											/>
+											<div className="flex justify-end border-t p-2">
+												<Button
+													type="button"
+													variant="outline"
+													size="sm"
+													disabled={!field.value?.from}
+													onClick={() => setCalendarOpen(false)}
+												>
+													Done
+												</Button>
+											</div>
 										</PopoverContent>
 									</Popover>
 									<FormMessage />
@@ -213,15 +236,19 @@ export function CreateTripDialog() {
 
 export function DeleteTripDialog({ trip }: { trip: Trip }) {
 	const [open, setOpen] = useState(false);
-	const [isPending, startTransition] = useTransition();
+	const deleteTrip = useDeleteTrip();
+	const isPending = deleteTrip.isPending;
 
 	const router = useRouter();
 
-	const onClick = () =>
-		startTransition(async () => {
-			await deleteTrip(trip.id);
+	const onClick = async () => {
+		try {
+			await deleteTrip.mutateAsync(trip.id);
 			router.push(`/dashboard`);
-		});
+		} catch {
+			// onError toast already shown; keep the dialog open for a retry.
+		}
+	};
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>

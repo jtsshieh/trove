@@ -1,0 +1,53 @@
+// EssentialGroup = a reusable, user-owned bundle of essentials (e.g. a "Toiletry
+// kit") that can be quick-added to a trip all at once.
+model EssentialGroup {
+  id String @id @default(cuid())
+
+  name  String
+  order String
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  items      EssentialGroupItem[]
+  tripGroups TripEssentialGroup[]
+
+  @@map("essential_groups")
+}
+
+// TripEssentialGroup = a sub-group of essentials on one trip — created ad-hoc, or
+// materialized from a premade EssentialGroup. It lives in a single category section
+// of the trip essentials board; provisions point at it. Deleting it ungroups its
+// provisions (SetNull) rather than removing them.
+model TripEssentialGroup {
+  id String @id @default(cuid())
+
+  name     String
+  category EssentialCategory
+  order    String
+
+  tripId String @map("trip_id")
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  sourceGroupId String?         @map("source_group_id")
+  sourceGroup   EssentialGroup? @relation(fields: [sourceGroupId], references: [id], onDelete: SetNull)
+
+  provisions EssentialProvision[]
+
+  @@map("trip_essential_groups")
+}
+
+model EssentialGroupItem {
+  id String @id @default(cuid())
+
+  order String
+
+  groupId String         @map("group_id")
+  group   EssentialGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  essentialId String    @map("essential_id")
+  essential   Essential @relation(fields: [essentialId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, essentialId])
+  @@map("essential_group_items")
+}

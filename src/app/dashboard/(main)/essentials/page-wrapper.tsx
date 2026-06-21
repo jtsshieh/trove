@@ -6,7 +6,11 @@ import { Suspense } from 'react';
 import { EssentialCategory } from '@/generated/prisma/enums';
 
 import { Skeleton } from '../../../../components/ui/skeleton';
-import { essentialsQueryOptions } from './_data/queries';
+import {
+	essentialGroupsQueryOptions,
+	essentialsQueryOptions,
+} from './_data/queries';
+import { EssentialGroupsList } from './essential-groups-list';
 import { EssentialsList } from './essentials-list';
 
 export function EssentialsListContent() {
@@ -34,6 +38,30 @@ function EssentialsListSkeleton() {
 						))}
 					</div>
 				</div>
+			))}
+		</div>
+	);
+}
+
+export function EssentialGroupsContent() {
+	return (
+		<Suspense fallback={<EssentialGroupsSkeleton />}>
+			<EssentialGroupsData />
+		</Suspense>
+	);
+}
+
+function EssentialGroupsData() {
+	const { data: groups } = useSuspenseQuery(essentialGroupsQueryOptions);
+	const { data: essentials } = useSuspenseQuery(essentialsQueryOptions);
+	return <EssentialGroupsList groups={groups} essentials={essentials} />;
+}
+
+function EssentialGroupsSkeleton() {
+	return (
+		<div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+			{Array.from({ length: 6 }).map((_, i) => (
+				<Skeleton key={i} className="h-48 w-full rounded-xl" />
 			))}
 		</div>
 	);

@@ -17,7 +17,13 @@ export const getAllClothingTypesWithClothes = cache(async () => {
 
 	return prisma.clothingType.findMany({
 		orderBy: { name: 'asc' },
-		include: { clothes: { where: { userId: currentUser.id } } },
+		include: {
+			clothes: {
+				where: { userId: currentUser.id },
+				// Manual wardrobe order drives the picture-forward grid + drag-reorder.
+				orderBy: { order: 'asc' },
+			},
+		},
 	});
 });
 

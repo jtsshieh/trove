@@ -1,12 +1,16 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
 import type { Container } from '@/generated/prisma/client';
 import { ContainerType } from '@/generated/prisma/enums';
-import { Pencil, Plus, Trash } from 'lucide-react';
-import React, { FormEvent, useEffect, useState, useTransition } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
+import { ImageOff, Loader2, Pencil, Plus, Trash, Upload, X } from 'lucide-react';
+import React, {
+	FormEvent,
+	useEffect,
+	useRef,
+	useState,
+	type ChangeEvent,
+} from 'react';
+import { toast } from 'sonner';
 
 import { Button } from '../../../../../components/ui/button';
 import {
@@ -25,6 +29,8 @@ import {
 	FormItem,
 	FormLabel,
 	FormMessage,
+	useAppForm,
+	type AppForm,
 } from '../../../../../components/ui/form';
 import { Input } from '../../../../../components/ui/input';
 import {
@@ -34,31 +40,40 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '../../../../../components/ui/select';
+import { ImageEditorDialog } from '../../../../../components/image-editor-dialog';
+import { uploadImageFile } from '../../../../../lib/image-pipeline';
+import { imageSrc } from '../../../../../lib/images';
 import {
-	createContainer,
-	deleteContainer,
-	editContainer,
-} from './_data/actions';
+	useCreateContainer,
+	useDeleteContainer,
+	useEditContainer,
+} from './_data/mutations';
 import { createContainerSchema, editContainerSchema } from './_data/schemas';
 
 export function CreateContainerDialog() {
 	const [open, setOpen] = useState(false);
-	const [isPending, startTransition] = useTransition();
+	const createContainer = useCreateContainer();
+	const isPending = createContainer.isPending;
 
-	const form = useForm<z.infer<typeof createContainerSchema>>({
-		resolver: zodResolver(createContainerSchema),
+	const form = useAppForm({
+		schema: createContainerSchema,
 		defaultValues: {
 			name: '',
+			type: null as ContainerType | null,
+			quantity: 1 as number | undefined,
+			imageKey: null,
 		},
 	});
 
-	const onSubmit = form.handleSubmit((data) =>
-		startTransition(async () => {
-			await createContainer(data);
+	const onSubmit = form.handleSubmit(async (data) => {
+		try {
+			await createContainer.mutateAsync(data);
 			form.reset();
 			setOpen(false);
-		}),
-	);
+		} catch {
+			// onError toast already shown; keep the dialog open for a retry.
+		}
+	});
 	return (
 		<Dialog
 			open={open}
@@ -79,59 +94,13 @@ export function CreateContainerDialog() {
 				<Plus />
 				<span className="hidden sm:block">Add Container</span>
 			</DialogTrigger>
-			<DialogContent>
+			<DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
 				<Form {...form}>
-					<form onSubmit={onSubmit} className="space-y-8">
+					<form onSubmit={onSubmit} className="space-y-5">
 						<DialogHeader>
 							<DialogTitle>Add Container</DialogTitle>
 						</DialogHeader>
-
-						<FormField
-							control={form.control}
-							name="name"
-							render={({ field }) => (
-								<FormItem className="flex flex-col">
-									<FormLabel>Name</FormLabel>
-									<FormControl>
-										<Input
-											disabled={isPending}
-											placeholder="Enter a name for this container"
-											{...field}
-										/>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-
-						<FormField
-							control={form.control}
-							name="type"
-							render={({ field }) => (
-								<FormItem className="flex flex-col">
-									<FormLabel>Type</FormLabel>
-									<Select
-										onValueChange={field.onChange}
-										defaultValue={field.value}
-									>
-										<FormControl>
-											<SelectTrigger>
-												<SelectValue placeholder="Select the type of items that will go into this container" />
-											</SelectTrigger>
-										</FormControl>
-										<SelectContent>
-											{Object.keys(ContainerType).map((type) => (
-												<SelectItem value={type} key={type}>
-													{type}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-
+						<ContainerBody form={form} disabled={isPending} />
 						<DialogFooter>
 							<Button type="submit" loading={isPending}>
 								Add Container
@@ -152,29 +121,36 @@ export function EditContainerDialog({
 	disabled: boolean;
 }) {
 	const [open, setOpen] = useState(false);
-	const [isPending, startTransition] = useTransition();
+	const editContainer = useEditContainer();
+	const isPending = editContainer.isPending;
 
-	const form = useForm<z.infer<typeof editContainerSchema>>({
-		resolver: zodResolver(editContainerSchema),
+	const form = useAppForm({
+		schema: editContainerSchema,
 		defaultValues: {
 			name: container.name,
-			type: container.type,
+			type: container.type as ContainerType | null,
+			quantity: container.quantity as number | undefined,
+			imageKey: container.imageKey,
 		},
 	});
 
-	const onSubmit = form.handleSubmit((data) =>
-		startTransition(async () => {
-			await editContainer(container.id, data);
+	const onSubmit = form.handleSubmit(async (data) => {
+		try {
+			await editContainer.mutateAsync({ id: container.id, input: data });
 			setOpen(false);
-		}),
-	);
+		} catch {
+			// onError toast already shown; keep the dialog open for a retry.
+		}
+	});
 
 	useEffect(() => {
 		form.reset({
 			name: container.name,
 			type: container.type,
+			quantity: container.quantity,
+			imageKey: container.imageKey,
 		});
-	}, [container.name, container.type]);
+	}, [container.name, container.type, container.quantity, container.imageKey]);
 	return (
 		<Dialog
 			open={open}
@@ -183,6 +159,8 @@ export function EditContainerDialog({
 					form.reset({
 						name: container.name,
 						type: container.type,
+						quantity: container.quantity,
+						imageKey: container.imageKey,
 					});
 					setOpen(false);
 				} else {
@@ -195,59 +173,13 @@ export function EditContainerDialog({
 			>
 				<Pencil />
 			</DialogTrigger>
-			<DialogContent>
+			<DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
 				<Form {...form}>
-					<form onSubmit={onSubmit} className="space-y-8">
+					<form onSubmit={onSubmit} className="space-y-5">
 						<DialogHeader>
 							<DialogTitle>Edit Container</DialogTitle>
 						</DialogHeader>
-
-						<FormField
-							control={form.control}
-							name="name"
-							render={({ field }) => (
-								<FormItem className="flex flex-col">
-									<FormLabel>Name</FormLabel>
-									<FormControl>
-										<Input
-											disabled={isPending}
-											placeholder="Enter a name for this container"
-											{...field}
-										/>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-
-						<FormField
-							control={form.control}
-							name="type"
-							render={({ field }) => (
-								<FormItem className="flex flex-col">
-									<FormLabel>Type</FormLabel>
-									<Select
-										onValueChange={field.onChange}
-										defaultValue={field.value}
-									>
-										<FormControl>
-											<SelectTrigger>
-												<SelectValue placeholder="Select the type of items that will go into this container" />
-											</SelectTrigger>
-										</FormControl>
-										<SelectContent>
-											{Object.keys(ContainerType).map((type) => (
-												<SelectItem value={type} key={type}>
-													{type}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-
+						<ContainerBody form={form} disabled={isPending} />
 						<DialogFooter>
 							<Button type="submit" loading={isPending}>
 								Edit Container
@@ -260,6 +192,258 @@ export function EditContainerDialog({
 	);
 }
 
+/**
+ * The redesigned dialog body: a large photo on one side and the
+ * name/type/quantity fields on the other. Stacks to a single column on narrow
+ * screens.
+ */
+function ContainerBody({
+	form,
+	disabled,
+}: {
+	form: AppForm<any>;
+	disabled: boolean;
+}) {
+	return (
+		<div className="flex flex-col gap-5 sm:flex-row sm:gap-6">
+			<PhotoField form={form} disabled={disabled} />
+			<ContainerFields form={form} disabled={disabled} />
+		</div>
+	);
+}
+
+/**
+ * Large photo upload field. Uploads immediately; the "Edit" step opens the image
+ * editor (crop, erase anything, remove background).
+ */
+function PhotoField({
+	form,
+	disabled,
+}: {
+	form: AppForm<any>;
+	disabled: boolean;
+}) {
+	const inputRef = useRef<HTMLInputElement>(null);
+	const [file, setFile] = useState<File | null>(null);
+	const [busy, setBusy] = useState(false);
+	const [editing, setEditing] = useState(false);
+
+	async function uploadFile(toUpload: File, onChange: (key: string) => void) {
+		setBusy(true);
+		try {
+			onChange(await uploadImageFile(toUpload));
+		} catch {
+			toast.error('Upload failed');
+		} finally {
+			setBusy(false);
+		}
+	}
+
+	return (
+		<FormField
+			control={form.control}
+			name="imageKey"
+			render={({ field }) => {
+				function onSelect(event: ChangeEvent<HTMLInputElement>) {
+					const selected = event.target.files?.[0];
+					if (!selected) return;
+					setFile(selected);
+					void uploadFile(selected, (key) => field.onChange(key));
+					event.target.value = '';
+				}
+
+				const canEdit = !!file || !!field.value;
+
+				return (
+					<FormItem className="flex flex-col gap-2 sm:w-56 sm:shrink-0">
+						<FormLabel>Photo</FormLabel>
+						<FormControl>
+							<div className="flex flex-col gap-3">
+								<div className="relative aspect-square w-full overflow-hidden rounded-xl border bg-muted text-muted-foreground">
+									<button
+										type="button"
+										onClick={() => canEdit && setEditing(true)}
+										disabled={!canEdit || busy || disabled}
+										aria-label={canEdit ? 'Edit photo' : undefined}
+										className="group block size-full"
+									>
+										{field.value ? (
+											// eslint-disable-next-line @next/next/no-img-element
+											<img
+												src={imageSrc(field.value)}
+												alt=""
+												className="size-full object-cover"
+											/>
+										) : (
+											<div className="flex size-full flex-col items-center justify-center gap-2">
+												<ImageOff className="size-8 opacity-40" />
+												<span className="text-xs">No photo yet</span>
+											</div>
+										)}
+										{canEdit && !busy && (
+											<div className="absolute inset-0 grid place-content-center bg-background/0 text-foreground/0 transition-colors group-hover:bg-background/40 group-hover:text-foreground">
+												<Pencil className="size-6" />
+											</div>
+										)}
+									</button>
+									{busy && (
+										<div className="bg-background/60 absolute inset-0 grid place-content-center">
+											<Loader2 className="size-6 animate-spin" />
+										</div>
+									)}
+									{field.value && !busy && (
+										<Button
+											type="button"
+											size="icon-sm"
+											variant="secondary"
+											className="absolute top-2 right-2 z-10"
+											onClick={() => {
+												field.onChange(null);
+												setFile(null);
+											}}
+											disabled={disabled}
+											aria-label="Remove photo"
+										>
+											<X />
+										</Button>
+									)}
+								</div>
+								<input
+									ref={inputRef}
+									type="file"
+									accept="image/*"
+									capture="environment"
+									className="hidden"
+									onChange={onSelect}
+								/>
+								<div className="flex flex-wrap gap-1.5">
+									<Button
+										type="button"
+										size="sm"
+										variant="outline"
+										onClick={() => inputRef.current?.click()}
+										disabled={busy || disabled}
+									>
+										<Upload /> {field.value ? 'Replace' : 'Add photo'}
+									</Button>
+									<Button
+										type="button"
+										size="sm"
+										variant="ghost"
+										onClick={() => setEditing(true)}
+										disabled={!canEdit || busy || disabled}
+										title="Crop, erase, or remove the background"
+									>
+										<Pencil /> Edit
+									</Button>
+								</div>
+								<ImageEditorDialog
+									open={editing}
+									onOpenChange={setEditing}
+									file={file}
+									src={!file && field.value ? imageSrc(field.value) : null}
+									onApply={(edited) => {
+										setFile(edited);
+										void uploadFile(edited, (key) => field.onChange(key));
+									}}
+								/>
+							</div>
+						</FormControl>
+						<FormMessage />
+					</FormItem>
+				);
+			}}
+		/>
+	);
+}
+
+/** The shared name/type/quantity fields. */
+function ContainerFields({
+	form,
+	disabled,
+}: {
+	form: AppForm<any>;
+	disabled: boolean;
+}) {
+	return (
+		<div className="flex min-w-0 flex-1 flex-col gap-4">
+			<FormField
+				control={form.control}
+				name="name"
+				render={({ field }) => (
+					<FormItem className="flex flex-col">
+						<FormLabel>Name</FormLabel>
+						<FormControl>
+							<Input
+								disabled={disabled}
+								placeholder="Enter a name for this container"
+								{...field}
+							/>
+						</FormControl>
+						<FormMessage />
+					</FormItem>
+				)}
+			/>
+			<FormField
+				control={form.control}
+				name="type"
+				render={({ field }) => (
+					<FormItem className="flex flex-col">
+						<FormLabel>Type</FormLabel>
+						<Select
+							value={field.value ?? null}
+							onValueChange={field.onChange}
+							disabled={disabled}
+						>
+							<FormControl>
+								<SelectTrigger className="w-full">
+									<SelectValue placeholder="Select the type of items that will go into this container" />
+								</SelectTrigger>
+							</FormControl>
+							<SelectContent>
+								{Object.keys(ContainerType).map((type) => (
+									<SelectItem value={type} key={type}>
+										{type}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+						<FormMessage />
+					</FormItem>
+				)}
+			/>
+			<FormField
+				control={form.control}
+				name="quantity"
+				render={({ field }) => (
+					<FormItem className="flex flex-col">
+						<FormLabel>Quantity</FormLabel>
+						<FormControl>
+							<Input
+								type="number"
+								min={1}
+								disabled={disabled}
+								data-testid="quantity-input"
+								placeholder="How many identical containers you own"
+								{...field}
+								value={field.value ?? ''}
+								onChange={(event) =>
+									field.onChange(
+										event.target.value === ''
+											? undefined
+											: Math.max(1, Math.trunc(+event.target.value)),
+									)
+								}
+							/>
+						</FormControl>
+						<FormMessage />
+					</FormItem>
+				)}
+			/>
+		</div>
+	);
+}
+
 export function DeleteContainerDialog({
 	container,
 	disabled,
@@ -268,13 +452,17 @@ export function DeleteContainerDialog({
 	disabled: boolean;
 }) {
 	const [open, setOpen] = useState(false);
-	const [isPending, startTransition] = useTransition();
-	const onSubmit = (e: FormEvent<HTMLFormElement>) =>
-		startTransition(async () => {
-			e.preventDefault();
-			await deleteContainer(container.id);
+	const deleteContainer = useDeleteContainer();
+	const isPending = deleteContainer.isPending;
+	const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
+		e.preventDefault();
+		try {
+			await deleteContainer.mutateAsync(container.id);
 			setOpen(false);
-		});
+		} catch {
+			// onError toast already shown; keep the dialog open for a retry.
+		}
+	};
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>

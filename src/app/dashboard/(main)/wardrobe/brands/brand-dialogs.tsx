@@ -1,11 +1,8 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
 import type { Brand } from '@/generated/prisma/client';
 import { Plus, Trash } from 'lucide-react';
-import React, { FormEvent, useEffect, useState, useTransition } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
+import React, { FormEvent, useEffect, useState } from 'react';
 
 import { Button } from '../../../../../components/ui/button';
 import {
@@ -23,25 +20,34 @@ import {
 	FormItem,
 	FormLabel,
 	FormMessage,
+	useAppForm,
 } from '../../../../../components/ui/form';
 import { Input } from '../../../../../components/ui/input';
-import { createBrand, deleteBrand, editBrand } from './_data/actions';
+import {
+	useCreateBrand,
+	useDeleteBrand,
+	useEditBrand,
+} from './_data/mutations';
 import { createBrandSchema, editBrandSchema } from './_data/schemas';
 
 export function CreateBrandDialog() {
 	const [open, setOpen] = useState(false);
-	const [isPending, startTransition] = useTransition();
-	const form = useForm<z.infer<typeof createBrandSchema>>({
-		resolver: zodResolver(createBrandSchema),
+	const createBrand = useCreateBrand();
+	const isPending = createBrand.isPending;
+	const form = useAppForm({
+		schema: createBrandSchema,
+		defaultValues: { name: '' },
 	});
 
-	const onSubmit = form.handleSubmit((data) =>
-		startTransition(async () => {
-			await createBrand(data);
+	const onSubmit = form.handleSubmit(async (data) => {
+		try {
+			await createBrand.mutateAsync(data);
 			form.reset();
 			setOpen(false);
-		}),
-	);
+		} catch {
+			// onError toast already shown; keep the dialog open for a retry.
+		}
+	});
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
@@ -83,20 +89,23 @@ export function CreateBrandDialog() {
 
 export function EditBrandDialog({ brand }: { brand: Brand }) {
 	const [open, setOpen] = useState(false);
-	const [isPending, startTransition] = useTransition();
-	const form = useForm<z.infer<typeof editBrandSchema>>({
-		resolver: zodResolver(editBrandSchema),
+	const editBrand = useEditBrand();
+	const isPending = editBrand.isPending;
+	const form = useAppForm({
+		schema: editBrandSchema,
 		defaultValues: {
 			name: brand.name,
 		},
 	});
 
-	const onSubmit = form.handleSubmit((data) =>
-		startTransition(async () => {
-			await editBrand(brand.name, data);
+	const onSubmit = form.handleSubmit(async (data) => {
+		try {
+			await editBrand.mutateAsync({ name: brand.name, input: data });
 			setOpen(false);
-		}),
-	);
+		} catch {
+			// onError toast already shown; keep the dialog open for a retry.
+		}
+	});
 
 	useEffect(() => {
 		form.reset({
@@ -154,13 +163,17 @@ export function EditBrandDialog({ brand }: { brand: Brand }) {
 
 export function DeleteBrandDialog({ brand }: { brand: Brand }) {
 	const [open, setOpen] = useState(false);
-	const [isPending, startTransition] = useTransition();
-	const onSubmit = (e: FormEvent<HTMLFormElement>) =>
-		startTransition(async () => {
-			e.preventDefault();
-			await deleteBrand(brand.name);
+	const deleteBrand = useDeleteBrand();
+	const isPending = deleteBrand.isPending;
+	const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
+		e.preventDefault();
+		try {
+			await deleteBrand.mutateAsync(brand.name);
 			setOpen(false);
-		});
+		} catch {
+			// onError toast already shown; keep the dialog open for a retry.
+		}
+	};
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>

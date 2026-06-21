@@ -1,8 +1,12 @@
 import { queryOptions } from '@tanstack/react-query';
 
-import { fetchAllBrands } from './actions';
+import { fetchBrands } from './api';
+
+export const brandKeys = {
+	all: ['brands'] as const,
+};
 
 export const brandsQueryOptions = queryOptions({
-	queryKey: ['brands'],
-	queryFn: fetchAllBrands,
+	queryKey: brandKeys.all,
+	queryFn: fetchBrands,
 });

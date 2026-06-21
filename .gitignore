@@ -43,3 +43,21 @@ next-env.d.ts
 certificates
 # e2e test artifacts
 /e2e/*.png
+
+# Playwright
+/e2e/.auth/
+/test-results/
+/playwright-report/
+/blob-report/
+
+# downloaded model weights (LaMa inpainting, etc.)
+/.cache/
+
+# JetBrains local datasource config (connection settings, not project code)
+/.idea/dataSources/
+/.idea/dataSources.xml
+/.idea/dataSources.local.xml
+/.idea/inspectionProfiles/
+
+# local agent tooling
+/.agents/

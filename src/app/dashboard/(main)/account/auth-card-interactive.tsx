@@ -1,6 +1,5 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
 import {
 	WebAuthnError,
 	browserSupportsWebAuthn,
@@ -9,17 +8,10 @@ import {
 import { format, formatRelative } from 'date-fns';
 import { AlertCircle, Pencil, Trash } from 'lucide-react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import React, { FormEvent, useEffect, useState, useTransition } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 
 import aaguids from '../../../(auth)/_data/aaguids.json';
-import {
-	deletePasskey,
-	getRegistrationOptions,
-	renamePasskey,
-	verifyRegistration,
-} from '../../../(auth)/_data/actions';
 import { renamePasskeySchema } from '../../../(auth)/_data/schemas';
 import { Alert, AlertDescription } from '../../../../components/ui/alert';
 import { Button } from '../../../../components/ui/button';
@@ -45,16 +37,23 @@ import {
 	FormItem,
 	FormLabel,
 	FormMessage,
+	useAppForm,
 } from '../../../../components/ui/form';
 import { Input } from '../../../../components/ui/input';
 import { toast } from 'sonner';
 
-import { editEssentialSchema } from '../essentials/_data/schemas';
-import { PasskeyDTO } from './_data/fetchers';
+import {
+	deletePasskey,
+	getRegistrationOptions,
+	renamePasskey,
+	verifyRegistration,
+} from './_data/api';
+import type { PasskeyDTO } from './_data/fetchers';
 
 export function AuthCardInteractive({ passkeys }: { passkeys: PasskeyDTO[] }) {
 	const [isPending, startTransition] = useTransition();
 	const [error, setError] = useState('');
+	const router = useRouter();
 	const createPasskey = () =>
 		startTransition(async () => {
 			const registrationOptions = await getRegistrationOptions();
@@ -95,6 +94,9 @@ export function AuthCardInteractive({ passkeys }: { passkeys: PasskeyDTO[] }) {
 				}
 				setTimeout(() => setError(''), 10000);
 			} else {
+				// The passkey list is server-rendered + prop-drilled; refresh so the
+				// new passkey appears (replaces revalidatePath('/dashboard/account')).
+				router.refresh();
 				toast.success('Passkey added successfully');
 				setError('');
 			}
@@ -173,8 +175,9 @@ function PasskeyRow({ passkey }: { passkey: PasskeyDTO }) {
 function EditPasskeyDialog({ passkey }: { passkey: PasskeyDTO }) {
 	const [open, setOpen] = useState(false);
 	const [isPending, startTransition] = useTransition();
-	const form = useForm<z.infer<typeof renamePasskeySchema>>({
-		resolver: zodResolver(editEssentialSchema),
+	const router = useRouter();
+	const form = useAppForm({
+		schema: renamePasskeySchema,
 		defaultValues: {
 			name: passkey.name,
 		},
@@ -182,7 +185,10 @@ function EditPasskeyDialog({ passkey }: { passkey: PasskeyDTO }) {
 
 	const onSubmit = form.handleSubmit((data) =>
 		startTransition(async () => {
-			await renamePasskey(passkey.id, data);
+			await renamePasskey(passkey.id, data.name);
+			// The passkey list is server-rendered + prop-drilled; refresh so the
+			// new name appears (replaces revalidatePath('/dashboard/account')).
+			router.refresh();
 			setOpen(false);
 		}),
 	);
@@ -244,12 +250,16 @@ function EditPasskeyDialog({ passkey }: { passkey: PasskeyDTO }) {
 
 function DeletePasskeyDialog({ passkey }: { passkey: PasskeyDTO }) {
 	const [open, setOpen] = useState(false);
+	const router = useRouter();
 
 	const [isPending, startTransition] = useTransition();
 	const onSubmit = (e: FormEvent<HTMLFormElement>) =>
 		startTransition(async () => {
 			e.preventDefault();
 			await deletePasskey(passkey.id);
+			// The passkey list is server-rendered + prop-drilled; refresh so the
+			// deleted passkey disappears (replaces revalidatePath('/dashboard/account')).
+			router.refresh();
 			setOpen(false);
 		});
 

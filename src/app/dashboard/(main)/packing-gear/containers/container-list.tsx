@@ -1,50 +1,66 @@
 'use client';
 
-import { DragDropProvider, type DragEndEvent } from '@dnd-kit/react';
-import { useSortable } from '@dnd-kit/react/sortable';
-import { LexoRank } from 'lexorank';
-import { startTransition, useOptimistic } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Package } from 'lucide-react';
+import { useCallback } from 'react';
+import { toast } from 'sonner';
 
 import type { Container } from '@/generated/prisma/client';
 
+import { DragAnnouncer, DragBoard, DropZone, Sortable } from '@/components/dnd';
+import { rankForNeighbors, sortByRank } from '@/lib/dnd/lexorank';
+import { useDragBoard, type SortableDrop } from '@/lib/dnd/use-drag-board';
+import { encodeZone, type Zone } from '@/lib/dnd/zone';
+
 import { EmptyList } from '../../../../../components/empty-list';
-import {
-	Card,
-	CardDescription,
-	CardFooter,
-	CardHeader,
-	CardTitle,
-} from '../../../../../components/ui/card';
+import { Card, CardFooter } from '../../../../../components/ui/card';
+import { imageSrc } from '../../../../../lib/images';
 import { cn } from '../../../../../lib/utils';
-import { editContainer } from './_data/actions';
+import { reorderContainer } from './_data/api';
+import { containerKeys } from './_data/queries';
 import {
 	DeleteContainerDialog,
 	EditContainerDialog,
 } from './container-dialogs';
 
-interface UpdatePayload {
-	idx: number;
-	order: string;
+// The container library is one self-contained ordered scope; this zone only groups
+// the sortables (no cross-zone moves), so a stable synthetic identity is enough.
+const LIBRARY_ZONE: Zone = { kind: 'closet', ownerId: 'container-library' };
+
+/** One controlled group; array order = display order. */
+function buildGroups(containers: Container[]): Record<string, Container[]> {
+	return {
+		[encodeZone(LIBRARY_ZONE)]: sortByRank(containers, (c) => c.order),
+	};
 }
 
-export function ContainerList({
-	containers,
-	sorting,
-}: {
-	containers: Container[];
-	sorting: boolean;
-}) {
-	const [items, updateOrder] = useOptimistic(
-		containers,
-		(currentContainers, updatePayload: UpdatePayload) => {
-			const newContainers = [...currentContainers];
-			newContainers[updatePayload.idx] = {
-				...newContainers[updatePayload.idx],
-				order: updatePayload.order,
-			};
-			return newContainers.sort((a, b) => a.order.localeCompare(b.order));
+export function ContainerList({ containers }: { containers: Container[] }) {
+	const queryClient = useQueryClient();
+
+	// Reorder is the only persisted op (single zone). Compute the rank from the
+	// container's final neighbours, persist, then re-sync.
+	const onSortableDrop = useCallback(
+		(drop: SortableDrop<Container>) => {
+			if (!drop.sameZone) return;
+			const order = rankForNeighbors(drop.destItems, drop.index, (c) => c.order);
+			void (async () => {
+				try {
+					await reorderContainer(drop.id, order);
+				} catch {
+					toast.error('Could not reorder');
+				} finally {
+					await queryClient.invalidateQueries({ queryKey: containerKeys.all });
+				}
+			})();
 		},
+		[queryClient],
 	);
+
+	const { groups, props } = useDragBoard<Container>({
+		groups: () => buildGroups(containers),
+		deps: [containers],
+		onSortableDrop,
+	});
 
 	if (containers.length === 0)
 		return (
@@ -54,74 +70,36 @@ export function ContainerList({
 			/>
 		);
 
-	const handleDragEnd = (event: DragEndEvent) =>
-		startTransition(async () => {
-			const { source, target } = event.operation;
-			if (event.canceled || !source || !target || source.id === target.id)
-				return;
-
-			const oldIndex = items.findIndex((x) => x.id === source.id);
-			const newIndex = items.findIndex((x) => x.id === target.id);
-			if (oldIndex === -1 || newIndex === -1) return;
-
-			let order;
-			if (newIndex === 0) {
-				const next = items[newIndex];
-				order = LexoRank.parse(next.order).genPrev();
-			} else if (newIndex === items.length - 1) {
-				const prev = items[newIndex];
-				order = LexoRank.parse(prev.order).genNext();
-			} else {
-				const prev = items[newIndex];
-				const offset = oldIndex > newIndex ? -1 : 1;
-				const next = items[newIndex + offset];
-				order = LexoRank.parse(next.order).between(LexoRank.parse(prev.order));
-			}
-
-			updateOrder({ idx: oldIndex, order: order.toString() });
-			await editContainer(items[oldIndex].id, {
-				order: order.toString(),
-			});
-		});
+	const ordered = groups[encodeZone(LIBRARY_ZONE)] ?? [];
 
 	return (
-		<div className="grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-			<DragDropProvider onDragEnd={handleDragEnd}>
-				{items.map((container, index) => (
-					<SortableContainer
-						container={container}
-						index={index}
+		<DragBoard {...props}>
+			<DragAnnouncer />
+			<DropZone
+				zone={LIBRARY_ZONE}
+				accepts={['container']}
+				className="grid auto-rows-fr grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+			>
+				{ordered.map((container, index) => (
+					<Sortable
 						key={container.id}
-						sorting={sorting}
-					/>
+						id={container.id}
+						index={index}
+						type="container"
+						zone={LIBRARY_ZONE}
+						accept={['container']}
+					>
+						{({ ref, isDragging }) => (
+							<ContainerCard
+								container={container}
+								setNodeRef={ref}
+								isDragging={isDragging}
+							/>
+						)}
+					</Sortable>
 				))}
-			</DragDropProvider>
-		</div>
-	);
-}
-
-function SortableContainer({
-	container,
-	index,
-	sorting,
-}: {
-	container: Container;
-	index: number;
-	sorting: boolean;
-}) {
-	const { ref, isDragging } = useSortable({
-		id: container.id,
-		index,
-		disabled: !sorting,
-	});
-
-	return (
-		<ContainerCard
-			container={container}
-			setNodeRef={sorting ? ref : undefined}
-			isDragging={isDragging}
-			sorting={sorting}
-		/>
+			</DropZone>
+		</DragBoard>
 	);
 }
 
@@ -129,35 +107,49 @@ function ContainerCard({
 	container,
 	setNodeRef,
 	isDragging = false,
-	sorting = false,
-	overlay = false,
 }: {
 	container: Container;
 	setNodeRef?: (node: HTMLElement | null) => void;
 	isDragging?: boolean;
-	sorting?: boolean;
-	overlay?: boolean;
 }) {
 	return (
 		<Card
 			className={cn(
-				'flex h-full flex-col',
+				'flex h-full flex-col gap-0 py-0 cursor-grab touch-none select-none',
 				isDragging && 'opacity-50',
-				sorting && 'cursor-grab touch-none select-none',
-				overlay && 'shadow-2xl',
 			)}
 			ref={setNodeRef}
 		>
-			<CardHeader className="flex-1 flex-row justify-between gap-2">
-				<div className="flex flex-col">
-					<CardTitle>{container.name}</CardTitle>
-					<CardDescription>{container.type}</CardDescription>
-				</div>
-			</CardHeader>
-			<CardFooter className="justify-between">
-				<DeleteContainerDialog container={container} disabled={sorting} />
-				<EditContainerDialog container={container} disabled={sorting} />
-			</CardFooter>
+			<div className="bg-muted text-muted-foreground relative aspect-square w-full overflow-hidden">
+				{container.imageKey ? (
+					// eslint-disable-next-line @next/next/no-img-element
+					<img
+						src={imageSrc(container.imageKey)}
+						alt={container.name}
+						loading="lazy"
+						className="size-full object-cover"
+					/>
+				) : (
+					<Package className="absolute inset-0 m-auto size-1/3 opacity-40" />
+				)}
+				{container.quantity > 1 && (
+					<span
+						data-testid="quantity-badge"
+						className="bg-brand-subtle text-brand absolute top-1.5 right-1.5 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums shadow-sm"
+					>
+						×{container.quantity}
+					</span>
+				)}
+			</div>
+			<div className="flex flex-1 flex-col gap-2 p-2.5">
+				<span className="font-heading text-sm leading-snug font-medium">
+					{container.name}
+				</span>
+				<CardFooter className="mt-auto justify-between gap-2 rounded-none border-t-0 bg-transparent p-0">
+					<DeleteContainerDialog container={container} disabled={false} />
+					<EditContainerDialog container={container} disabled={false} />
+				</CardFooter>
+			</div>
 		</Card>
 	);
 }

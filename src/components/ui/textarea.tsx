@@ -3,6 +3,8 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 function Textarea({ className, ...props }: React.ComponentProps<'textarea'>) {
+	// Same controlled-value guard as Input (see input.tsx).
+	const valueOverride = 'value' in props ? { value: props.value ?? '' } : {};
 	return (
 		<textarea
 			data-slot="textarea"
@@ -11,6 +13,7 @@ function Textarea({ className, ...props }: React.ComponentProps<'textarea'>) {
 				className,
 			)}
 			{...props}
+			{...valueOverride}
 		/>
 	);
 }

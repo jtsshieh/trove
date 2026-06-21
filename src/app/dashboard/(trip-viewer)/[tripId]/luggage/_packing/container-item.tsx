@@ -1,56 +1,63 @@
 'use client';
 
-import { useTransition } from 'react';
+import { Box } from 'lucide-react';
 
-import { Checkbox } from '../../../../../../components/ui/checkbox';
-import { Label } from '../../../../../../components/ui/label';
-import { cn } from '../../../../../../lib/utils';
-import { markContainerPacked } from './_data/actions';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ItemDisplay } from '@/components/ui/item-display';
+import { cn } from '@/lib/utils';
+
+import { useMarkContainerPacked } from './_data/mutations';
 
 export function ContainerPackItem({
+	tripId,
 	containerProvisionId,
 	containerName,
+	imageKey,
 	packed,
 }: {
+	tripId: string;
 	containerProvisionId: string;
 	containerName: string;
+	imageKey?: string | null;
 	packed: boolean;
 }) {
-	const [isLoading, startTransition] = useTransition();
-
-	function handleOnChecked(checked: boolean) {
-		startTransition(async () => {
-			await markContainerPacked(containerProvisionId, {
-				packed: checked,
-			});
-		});
-	}
+	const markContainerPacked = useMarkContainerPacked(tripId);
+	const isLoading = markContainerPacked.isPending;
 
 	return (
-		<div
+		<label
+			htmlFor={containerProvisionId}
 			className={cn(
-				'z-50 flex items-center justify-between gap-2 rounded-lg p-1',
+				'group/row -mx-1.5 flex items-center gap-3 rounded-lg px-1.5 py-1.5 transition-colors duration-[var(--dur-fast)] outline-none hover-hover:hover:bg-surface-sunken has-[:focus-visible]:bg-surface-sunken motion-safe:active:scale-[0.99]',
+				isLoading && 'opacity-60',
 			)}
 		>
 			<Checkbox
-				disabled={isLoading}
-				checked={packed}
-				onCheckedChange={handleOnChecked}
 				id={containerProvisionId}
+				checked={packed}
+				disabled={isLoading}
+				onCheckedChange={async (checked) => {
+					try {
+						await markContainerPacked.mutateAsync({
+							id: containerProvisionId,
+							input: { packed: Boolean(checked) },
+						});
+					} catch {
+						// surfaced via the mutation's onError toast
+					}
+				}}
+				className="size-5 rounded-md"
+			/>
+			<ItemDisplay
+				size="chip"
+				name={containerName}
+				imageKey={imageKey}
+				fallbackIcon={<Box />}
 				className={cn(
-					'my-1 h-6 w-6 rounded-lg',
-					packed && 'color-neutral-500 border-neutral-500',
+					'flex-1 transition-opacity duration-[var(--dur-fast)]',
+					packed && 'opacity-50 [&_span]:line-through',
 				)}
 			/>
-			<Label
-				className={cn(
-					'text-md flex-1 font-normal',
-					packed && 'text-neutral-500 line-through',
-				)}
-				htmlFor={containerProvisionId}
-			>
-				{containerName}
-			</Label>
-		</div>
+		</label>
 	);
 }

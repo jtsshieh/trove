@@ -1,11 +1,9 @@
 'use client';
 
-import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useState, useTransition } from 'react';
-import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { Alert, AlertDescription } from '../../../components/ui/alert';
@@ -25,9 +23,10 @@ import {
 	FormItem,
 	FormLabel,
 	FormMessage,
+	useAppForm,
 } from '../../../components/ui/form';
 import { Input } from '../../../components/ui/input';
-import { createUser } from '../../dashboard/(main)/account/_data/actions';
+import { signUp } from '../_data/api';
 
 const formSchema = z.object({
 	username: z.string(),
@@ -35,8 +34,9 @@ const formSchema = z.object({
 });
 
 export default function SignupPage() {
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+	const form = useAppForm({
+		schema: formSchema,
+		defaultValues: { username: '', password: '' },
 	});
 	const router = useRouter();
 	const [isPending, startTransition] = useTransition();
@@ -44,7 +44,7 @@ export default function SignupPage() {
 
 	const onSubmit = form.handleSubmit((data) =>
 		startTransition(async () => {
-			const result = await createUser(data.username, data.password);
+			const result = await signUp(data.username, data.password);
 
 			if (result.success) {
 				router.push('/dashboard');

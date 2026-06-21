@@ -23,9 +23,11 @@ export default async function SearchPage(props: {
 			container: clothingProvision.containerProvision?.container.name,
 			luggage:
 				clothingProvision.containerProvision?.luggageProvision?.luggage.name,
-			otherMatchers: [format(clothingProvision.day, 'LLLL dd y')],
+			otherMatchers: clothingProvision.day
+				? [format(clothingProvision.day, 'LLLL dd y')]
+				: [],
 
-			clothingDay: clothingProvision.day,
+			clothingDay: clothingProvision.day ?? undefined,
 		}));
 
 	const essentialProvisionSearchResults: SearchResult[] =

@@ -12,3 +12,17 @@ export const getAllEssentials = cache(async () => {
 		},
 	});
 });
+
+export const getAllEssentialGroups = cache(async () => {
+	const user = await getCurrentUserSafe();
+	return prisma.essentialGroup.findMany({
+		where: { userId: user.id },
+		orderBy: { order: 'asc' },
+		include: {
+			items: {
+				orderBy: { order: 'asc' },
+				include: { essential: true },
+			},
+		},
+	});
+});

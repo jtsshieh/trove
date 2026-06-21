@@ -6,10 +6,15 @@ model User {
   clothes    Clothing[]
   essentials Essential[]
 
-  luggage           Luggage[]
-  containers        Container[]
+  luggage    Luggage[]
+  containers Container[]
 
   trips Trip[]
+
+  outfits         Outfit[]
+  essentialGroups EssentialGroup[]
+
+  settings UserSettings?
 
   passkeys Passkey[]
 
@@ -19,22 +24,22 @@ model User {
 model Passkey {
   id String @id @default(cuid())
 
-  credentialId String @map("credential_id") @unique
+  credentialId String @unique @map("credential_id")
 
   publicKey Bytes @map("public_key")
 
   userId String @map("user_id")
-  user User @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
 
   webauthnUserId String @map("webauthn_user_id")
-  counter Int
+  counter        Int
 
   transports String
 
   name String
 
-  createdAt DateTime @default(now())
-  lastUsed DateTime?
+  createdAt DateTime  @default(now())
+  lastUsed  DateTime?
 
   aaguid String
 

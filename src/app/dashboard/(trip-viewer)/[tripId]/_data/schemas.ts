@@ -13,3 +13,6 @@ export const editTripSchema = z.object({
 export const changeTripModeSchema = z.object({
 	mode: z.enum([TripMode.Provision, TripMode.Pack, TripMode.Audit]),
 });
+
+export type CreateTripInput = z.infer<typeof createTripSchema>;
+export type EditTripInput = z.infer<typeof editTripSchema>;

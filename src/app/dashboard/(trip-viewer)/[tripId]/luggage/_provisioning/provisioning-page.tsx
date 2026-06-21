@@ -1,61 +1,43 @@
-import { Luggage } from 'lucide-react';
-import Link from 'next/link';
+import { HydrationBoundary, dehydrate } from '@tanstack/react-query';
 import { notFound } from 'next/navigation';
-import React from 'react';
+import { Suspense } from 'react';
 
-import { getAllLuggage } from '../../../../(main)/packing-gear/luggage/_data/fetchers';
-import { Progress } from '../../../../../../components/ui/progress';
-import { getTripWithLuggageProvisions } from './_data/fetchers';
-import { CreateLuggageProvisionDialog } from './create-luggage-provision-dialog';
-import { LuggageProvisionList } from './luggage-provision-list';
+import { getQueryClient } from '@/lib/query-client';
 
-export async function ProvisioningPage({ tripId }: { tripId: string }) {
-	const trip = await getTripWithLuggageProvisions(tripId);
-	if (!trip) return notFound();
+import LuggageProvisioningLoading from './loading';
+import { LuggageProvisioningContent } from './page-wrapper';
+import { getLuggageProvisioningBoard } from './_data/fetchers';
+import { luggageBoardKeys } from './_data/queries';
 
-	const luggage = await getAllLuggage();
-
-	const toAssign = trip.containerProvisions.length;
-	const assigned = trip.luggageProvisions.reduce(
-		(a, b) => a + b.containerProvisions.length,
-		0,
+export function ProvisioningPage({ tripId }: { tripId: string }) {
+	return (
+		<Suspense fallback={<LuggageProvisioningLoading />}>
+			<ProvisioningData tripId={tripId} />
+		</Suspense>
 	);
+}
+
+/**
+ * Streams the board: the page shell paints immediately while this server component
+ * prefetches into the query cache (using the direct DB loader as the queryFn) and
+ * hands the dehydrated cache to the client. The client board reads from that cache
+ * via useSuspenseQuery — it never calls its own fetch queryFn during initial render.
+ */
+async function ProvisioningData({ tripId }: { tripId: string }) {
+	const queryClient = getQueryClient();
+	const [data] = await Promise.all([
+		getLuggageProvisioningBoard(tripId),
+		queryClient.prefetchQuery({
+			queryKey: luggageBoardKeys.board(tripId),
+			queryFn: () => getLuggageProvisioningBoard(tripId),
+		}),
+	]);
+
+	if (!data) return notFound();
 
 	return (
-		<>
-			<div className="mb-4 flex items-center gap-4">
-				<Luggage className="h-10 w-10" />
-				<div className="flex-1">
-					<h2 className="text-2xl font-bold">Luggage</h2>
-					<p className="text-base text-neutral-600">
-						Choose all the luggage you'll be bringing on this trip and organize
-						your{' '}
-						<Link
-							href={`/dashboard/${tripId}/containers`}
-							className="font-medium text-neutral-700 hover:text-neutral-900"
-						>
-							selected containers
-						</Link>{' '}
-						into your selected luggage.
-					</p>
-				</div>
-				<CreateLuggageProvisionDialog
-					trip={trip}
-					luggage={luggage.filter(
-						(a) => !trip.luggageProvisions.some((b) => a.id === b.luggageId),
-					)}
-				/>
-			</div>
-			<div className="mb-4">
-				<Progress value={(assigned / toAssign) * 100} />
-				<p className="mt-2 text-neutral-600">
-					<span className="font-bold">
-						{assigned} / {toAssign}
-					</span>{' '}
-					of containers assigned to a luggage
-				</p>
-			</div>
-			<LuggageProvisionList trip={trip} />
-		</>
+		<HydrationBoundary state={dehydrate(queryClient)}>
+			<LuggageProvisioningContent tripId={tripId} />
+		</HydrationBoundary>
 	);
 }

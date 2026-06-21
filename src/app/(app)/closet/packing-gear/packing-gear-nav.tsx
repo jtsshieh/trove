@@ -3,33 +3,35 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const routes = [
 	{ name: 'Luggage', href: '/luggage' },
 	{ name: 'Containers', href: '/containers' },
 ] as const;
+
+/** Route-based nav styled to match the TabsList used by Clothing/Essentials. */
 export function PackingGearNav() {
 	const pathname = usePathname();
 	return (
-		<div className="flex flex-row gap-1 self-start rounded-xl bg-panel p-1">
-			{routes.map(({ name, href }) => (
-				<Button
-					key={name}
-					variant="secondary"
-					size="flexible"
-					className={cn(
-						'bg-transparent px-3 py-1.5 text-sm font-medium text-muted-foreground hover:bg-card hover:text-foreground',
-						[href, href.replace('/', '')].includes(pathname.split('/')[3]) &&
-							'bg-card text-foreground shadow-sm',
-					)}
-					nativeButton={false}
-					render={<Link href={`/closet/packing-gear${href}`} />}
-				>
-					{name}
-				</Button>
-			))}
+		<div className="text-muted-foreground inline-flex h-8 w-fit items-center justify-center rounded-lg bg-muted p-[3px]">
+			{routes.map(({ name, href }) => {
+				const active = [href, href.replace('/', '')].includes(
+					pathname.split('/')[3],
+				);
+				return (
+					<Link
+						key={name}
+						href={`/closet/packing-gear${href}`}
+						className={cn(
+							'text-foreground/60 hover:text-foreground inline-flex h-[calc(100%-1px)] items-center justify-center rounded-md px-2.5 text-sm font-medium whitespace-nowrap transition-colors',
+							active && 'bg-background text-foreground shadow-sm',
+						)}
+					>
+						{name}
+					</Link>
+				);
+			})}
 		</div>
 	);
 }

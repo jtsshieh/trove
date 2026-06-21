@@ -1,13 +1,9 @@
 'use client';
 
+import { ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useState, useTransition } from 'react';
-import { toast } from 'sonner';
 
-import {
-	ClothingTypePicker,
-	type PickerType,
-} from '@/components/clothing-type-picker';
 import { Button } from '@/components/ui/button';
 import {
 	Card,
@@ -20,20 +16,21 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ApiError } from '@/lib/api/errors';
+import { accentStyle, LAUNCHER_APPS } from '@/lib/apps';
 
-import { createClothingTypes, submitSetup } from './_data/api';
+import { submitSetup } from './_data/api';
 
-export function SetupWizard({ catalog }: { catalog: PickerType[] }) {
+// The non-admin apps to highlight on the welcome screen.
+const HIGHLIGHTS = LAUNCHER_APPS.filter((a) => !a.adminOnly);
+
+export function SetupWizard() {
 	const router = useRouter();
-	const [step, setStep] = useState<1 | 2>(1);
+	const [step, setStep] = useState<'welcome' | 'account'>('welcome');
 
 	const [username, setUsername] = useState('');
 	const [password, setPassword] = useState('');
 	const [error, setError] = useState('');
 	const [pending, startTransition] = useTransition();
-
-	const [keep, setKeep] = useState<PickerType[]>(catalog);
-	const [exclude, setExclude] = useState<PickerType[]>([]);
 
 	const createAdmin = () =>
 		startTransition(async () => {
@@ -44,49 +41,65 @@ export function SetupWizard({ catalog }: { catalog: PickerType[] }) {
 			}
 			try {
 				await submitSetup(username.trim(), password);
-				setStep(2);
+				router.push('/');
 			} catch (e) {
 				setError(e instanceof ApiError ? e.message : 'Setup failed.');
 			}
 		});
 
-	const finish = () =>
-		startTransition(async () => {
-			try {
-				if (keep.length > 0) await createClothingTypes(keep);
-				toast.success('Setup complete — welcome to Closet Manager!');
-				router.push('/');
-			} catch (e) {
-				toast.error(e instanceof ApiError ? e.message : 'Something went wrong');
-			}
-		});
-
-	const moveOut = (name: string) => {
-		setKeep((k) => k.filter((t) => t.name !== name));
-		const item = keep.find((t) => t.name === name);
-		if (item) setExclude((x) => [...x, item]);
-	};
-	const moveIn = (name: string) => {
-		setExclude((x) => x.filter((t) => t.name !== name));
-		const item = exclude.find((t) => t.name === name);
-		if (item) setKeep((k) => [...k, item]);
-	};
-	const add = (type: PickerType) => {
-		if ([...keep, ...exclude].some((t) => t.name === type.name)) {
-			toast.error(`"${type.name}" already exists`);
-			return;
-		}
-		setKeep((k) => [...k, type]);
-	};
-
 	return (
 		<div className="flex min-h-svh w-screen items-center justify-center p-4">
-			{step === 1 ? (
+			{step === 'welcome' ? (
+				<Card className="w-full max-w-lg">
+					<CardHeader className="items-center text-center">
+						<CardTitle className="text-2xl">Welcome to Closet Manager</CardTitle>
+						<CardDescription>
+							Your personal home for everything you own and everywhere you take
+							it.
+						</CardDescription>
+					</CardHeader>
+					<CardContent className="flex flex-col gap-3">
+						{HIGHLIGHTS.map((app) => (
+							<div
+								key={app.id}
+								className="flex items-center gap-3 rounded-xl border p-3"
+							>
+								<div
+									className="flex size-10 shrink-0 items-center justify-center rounded-lg"
+									style={{
+										...accentStyle(app.accent),
+										backgroundColor: 'var(--brand-subtle)',
+										color: 'var(--brand)',
+									}}
+								>
+									<app.icon className="size-5" />
+								</div>
+								<div className="min-w-0">
+									<p className="font-medium">{app.name}</p>
+									<p className="text-muted-foreground text-sm">
+										{app.description}
+									</p>
+								</div>
+							</div>
+						))}
+					</CardContent>
+					<CardFooter className="flex-col gap-3">
+						<Button className="w-full" onClick={() => setStep('account')}>
+							Get started
+							<ArrowRight />
+						</Button>
+						<p className="text-muted-foreground text-center text-xs">
+							Let&apos;s create the admin account for this server.
+						</p>
+					</CardFooter>
+				</Card>
+			) : (
 				<Card className="w-full max-w-md">
 					<CardHeader>
-						<CardTitle>Welcome to Closet Manager</CardTitle>
+						<CardTitle>Create the admin account</CardTitle>
 						<CardDescription>
-							Create the admin account for this server.
+							This is the owner account for the server. You can add more users
+							later in Admin.
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="flex flex-col gap-4">
@@ -113,40 +126,25 @@ export function SetupWizard({ catalog }: { catalog: PickerType[] }) {
 								onChange={(e) => setPassword(e.target.value)}
 								autoComplete="new-password"
 							/>
+							<p className="text-muted-foreground text-xs">
+								At least 8 characters.
+							</p>
 						</div>
 					</CardContent>
-					<CardFooter className="justify-end">
+					<CardFooter className="justify-between">
+						<Button
+							variant="ghost"
+							onClick={() => setStep('welcome')}
+							disabled={pending}
+						>
+							Back
+						</Button>
 						<Button
 							onClick={createAdmin}
 							loading={pending}
 							disabled={!username.trim() || !password}
 						>
-							Continue
-						</Button>
-					</CardFooter>
-				</Card>
-			) : (
-				<Card className="w-full max-w-3xl">
-					<CardHeader>
-						<CardTitle>Set up your clothing types</CardTitle>
-						<CardDescription>
-							Choose which clothing types to start with. You can change these
-							later in Admin → Clothing Types.
-						</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<ClothingTypePicker
-							keep={keep}
-							exclude={exclude}
-							onMoveToExclude={moveOut}
-							onMoveToKeep={moveIn}
-							onAdd={add}
-							busy={pending}
-						/>
-					</CardContent>
-					<CardFooter className="justify-end">
-						<Button onClick={finish} loading={pending}>
-							Finish setup
+							Create account
 						</Button>
 					</CardFooter>
 				</Card>

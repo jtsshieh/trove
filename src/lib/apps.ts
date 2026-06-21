@@ -57,7 +57,7 @@ export const APPS: AppDef[] = [
 	{
 		id: 'admin',
 		name: 'Admin',
-		description: 'Manage users, clothing types, and the system.',
+		description: 'Manage users and the system.',
 		icon: Shield,
 		href: '/admin',
 		accent: { base: 'oklch(0.64 0.14 65)', subtle: 'oklch(0.95 0.04 70)' },

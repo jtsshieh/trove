@@ -48,7 +48,7 @@ export const APPS: AppDef[] = [
 	},
 	{
 		id: 'trip-planner',
-		name: 'Trip Planner',
+		name: 'Trips',
 		description: 'Plan, provision, and pack for your trips.',
 		icon: Map,
 		href: '/trip-planner',
@@ -80,12 +80,16 @@ export function getApp(id: string): AppDef | undefined {
 	return APPS.find((a) => a.id === id);
 }
 
-/** Inline CSS-var overrides that re-theme the `brand` color role for an app. */
+/** Inline CSS-var overrides that re-theme the `brand` AND `primary` color roles for
+ * an app, so accents propagate to icons, active tabs, and main (primary) buttons. */
 export function accentStyle(accent: AppAccent): CSSProperties {
 	return {
 		'--brand': accent.base,
 		'--brand-subtle': accent.subtle,
 		'--brand-foreground': 'oklch(0.985 0 0)',
 		'--ring-brand': accent.base,
+		'--primary': accent.base,
+		'--primary-foreground': 'oklch(0.985 0 0)',
+		'--ring': accent.base,
 	} as CSSProperties;
 }

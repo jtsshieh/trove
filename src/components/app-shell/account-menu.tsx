@@ -1,6 +1,6 @@
 'use client';
 
-import { Grid3x3, LogOut, Server, Settings } from 'lucide-react';
+import { LogOut, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React from 'react';
@@ -10,19 +10,14 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-export function AccountMenu({
-	username,
-	isAdmin,
-}: {
-	username: string;
-	isAdmin: boolean;
-}) {
+export function AccountMenu({ username }: { username: string }) {
 	const router = useRouter();
 	const handleSignOut = async () => {
 		await signOut();
@@ -45,16 +40,12 @@ export function AccountMenu({
 				</Avatar>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end">
-				<DropdownMenuLabel>{username}</DropdownMenuLabel>
+				<DropdownMenuGroup>
+					<DropdownMenuLabel className="text-foreground text-sm font-semibold">
+						{username}
+					</DropdownMenuLabel>
+				</DropdownMenuGroup>
 				<DropdownMenuSeparator />
-				<DropdownMenuItem
-					className="flex gap-2"
-					nativeButton={false}
-					render={<Link href="/" />}
-				>
-					<Grid3x3 />
-					All apps
-				</DropdownMenuItem>
 				<DropdownMenuItem
 					className="flex gap-2"
 					nativeButton={false}
@@ -63,18 +54,12 @@ export function AccountMenu({
 					<Settings />
 					Settings
 				</DropdownMenuItem>
-				{isAdmin && (
-					<DropdownMenuItem
-						className="flex gap-2"
-						nativeButton={false}
-						render={<Link href="/admin" />}
-					>
-						<Server />
-						Admin
-					</DropdownMenuItem>
-				)}
 				<DropdownMenuSeparator />
-				<DropdownMenuItem className="flex gap-2" onClick={handleSignOut}>
+				<DropdownMenuItem
+					variant="destructive"
+					className="flex gap-2"
+					onClick={handleSignOut}
+				>
 					<LogOut />
 					Sign out
 				</DropdownMenuItem>

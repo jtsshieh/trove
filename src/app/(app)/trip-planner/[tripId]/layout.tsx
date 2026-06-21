@@ -3,8 +3,9 @@ import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import React, { ReactNode, Suspense } from 'react';
 
+import { AppShell } from '@/components/app-shell/app-shell';
 import { DisplayModeProvider } from '@/components/display-mode';
-import { getUserSettings } from '@/app/(app)/account/_data/fetchers';
+import { getCurrentUserSafe, getUserSettings, isAdmin } from '@/lib/auth';
 
 import { getTrip } from './_data/fetchers';
 import { SIDEBAR_COOKIE } from './sidebar-cookie';
@@ -18,31 +19,38 @@ async function TripViewerLayout({
 	params: Promise<{ tripId: string }>;
 }) {
 	const { tripId } = await params;
-	const [trip, settings, cookieStore] = await Promise.all([
+	const [trip, settings, cookieStore, user] = await Promise.all([
 		getTrip(tripId),
 		getUserSettings(),
 		cookies(),
+		getCurrentUserSafe(),
 	]);
 	if (!trip) return notFound();
 
 	const navCollapsed = cookieStore.get(SIDEBAR_COOKIE)?.value === 'true';
 
 	return (
-		<DisplayModeProvider initial={settings.displayMode}>
-			<div className="flex h-svh w-screen flex-col">
-				<div className="flex min-h-0 flex-1 flex-col md:flex-row">
+		<AppShell
+			appId="trip-planner"
+			username={user.username}
+			isAdmin={isAdmin(user)}
+			sections={[]}
+			contentClassName="flex min-h-0 flex-1 overflow-hidden"
+		>
+			<DisplayModeProvider initial={settings.displayMode}>
+				<div className="flex min-h-0 w-full flex-1 flex-col md:flex-row">
 					<div className="hidden md:block">
 						<TripSideNav trip={trip} defaultCollapsed={navCollapsed} />
 					</div>
 					<div className="w-full border-b p-2 px-4 md:hidden">
 						<MobileTripNav trip={trip} />
 					</div>
-					<div className="flex min-h-0 flex-1 scroll-pt-20 flex-col overflow-y-auto scroll-smooth bg-surface-sunken p-4 sm:p-8">
+					<div className="bg-surface-sunken flex min-h-0 flex-1 scroll-pt-20 flex-col overflow-y-auto scroll-smooth p-4 sm:p-8">
 						{children}
 					</div>
 				</div>
-			</div>
-		</DisplayModeProvider>
+			</DisplayModeProvider>
+		</AppShell>
 	);
 }
 

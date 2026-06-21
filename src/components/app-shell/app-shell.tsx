@@ -24,10 +24,15 @@ export interface AppSection {
 	icon: React.ReactNode;
 }
 
+const ICON_BTN =
+	'inline-flex size-9 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100';
+
 /**
- * Top-bar shell every app renders. Derives the app's name/icon/accent from the
- * registry by `appId`; the accent re-themes the `brand` color role for the whole
- * subtree (icons, active tabs, buttons) via CSS-var overrides on the root.
+ * Top-bar shell every app renders. Derives the app's name/accent from the registry
+ * by `appId`; the accent re-themes the `brand` + `primary` color roles for the whole
+ * subtree (icons, active tabs, primary buttons) via CSS-var overrides on the root.
+ * `contentClassName` overrides the default padded content area (the trip viewer
+ * passes a full-bleed one).
  */
 export function AppShell({
 	appId,
@@ -35,17 +40,18 @@ export function AppShell({
 	username,
 	isAdmin,
 	children,
+	contentClassName,
 }: {
 	appId: string;
 	sections: AppSection[];
 	username: string;
 	isAdmin: boolean;
 	children: React.ReactNode;
+	contentClassName?: string;
 }) {
 	const pathname = usePathname();
 	const [switcherOpen, setSwitcherOpen] = useState(false);
 	const app = getApp(appId);
-	const Icon = app?.icon;
 	const switcherApps = LAUNCHER_APPS.filter((a) => !a.adminOnly || isAdmin);
 
 	return (
@@ -54,14 +60,14 @@ export function AppShell({
 			style={app ? accentStyle(app.accent) : undefined}
 		>
 			<nav className="flex items-center justify-between gap-4 border-b px-4 py-2">
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-1">
 					<Popover open={switcherOpen} onOpenChange={setSwitcherOpen}>
 						<PopoverTrigger
 							render={
 								<button
 									type="button"
 									aria-label="All apps"
-									className="inline-flex size-9 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100"
+									className={ICON_BTN}
 								/>
 							}
 						>
@@ -71,12 +77,12 @@ export function AppShell({
 							<AppTiles
 								apps={switcherApps}
 								size="sm"
+								home
 								onNavigate={() => setSwitcherOpen(false)}
 							/>
 						</PopoverContent>
 					</Popover>
-					<span className="flex items-center gap-2 px-1 font-bold">
-						{Icon && <Icon className="text-brand size-5" />}
+					<span className="text-brand px-1 font-bold">
 						{app?.name ?? 'Closet Manager'}
 					</span>
 					{sections.length > 0 && (
@@ -99,9 +105,14 @@ export function AppShell({
 						</div>
 					)}
 				</div>
-				<AccountMenu username={username} isAdmin={isAdmin} />
+				<AccountMenu username={username} />
 			</nav>
-			<div className="flex flex-1 overflow-auto border-t bg-neutral-50 p-8">
+			<div
+				className={
+					contentClassName ??
+					'flex flex-1 overflow-auto border-t bg-neutral-50 p-8'
+				}
+			>
 				{children}
 			</div>
 		</div>

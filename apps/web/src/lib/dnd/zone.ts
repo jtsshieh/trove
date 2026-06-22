@@ -10,18 +10,23 @@ export type ItemType =
 	| 'clothing'
 	| 'essential'
 	| 'container'
+	| 'suitcase' // a LuggageProvision card, reorderable on the luggage board
 	| 'outfit' // a reusable Outfit template (closet → day materializes it)
 	| 'trip-outfit'; // a placed TripOutfit grouping (day → day moves it whole)
 
 export type ZoneKind =
 	| 'day' // clothing on a calendar/list day            owner = isoDay
 	| 'outfit' // clothing grouped under a TripOutfit      owner = tripOutfitId
+	| 'outfitLane' // reorderable TripOutfits within a day  owner = isoDay
 	| 'universal' // day-agnostic universal section         owner = tripId
 	| 'backup' // day-agnostic backup section               owner = tripId
 	| 'essentialCategory' // trip essentials by category    owner = EssentialCategory
 	| 'essentialSubgroup' // a trip essential sub-group      owner = tripEssentialGroupId
 	| 'container' // items packed into a ContainerProvision  owner = containerProvisionId
+	| 'containerless' // items packed straight into luggage  owner = tripId
+	| 'containerCards' // the reorderable container cards     owner = tripId
 	| 'luggage' // containers packed into a LuggageProvision owner = luggageProvisionId
+	| 'luggageCards' // the reorderable suitcase cards        owner = tripId
 	| 'wardrobe' // wardrobe grid, one zone per type group   owner = typeName
 	| 'closet'; // wardrobe panel (drag source only)         owner = tripId
 

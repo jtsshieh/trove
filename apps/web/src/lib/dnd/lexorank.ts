@@ -62,14 +62,34 @@ export function rankForNeighbors<T>(
 	index: number,
 	getRank: (item: T) => string,
 ): string {
-	const prev = ordered[index - 1];
-	const next = ordered[index + 1];
-	if (!prev && !next) return LexoRank.middle().toString();
-	if (!prev) return LexoRank.parse(getRank(next)).genPrev().toString();
-	if (!next) return LexoRank.parse(getRank(prev)).genNext().toString();
-	return LexoRank.parse(getRank(prev))
-		.between(LexoRank.parse(getRank(next)))
-		.toString();
+	// Parse defensively: legacy/backfilled rows can carry an empty or non-lexorank
+	// value (e.g. a column added with a default before it was assigned a real rank),
+	// and `LexoRank.parse('')` throws. Treat any unparseable neighbour as absent so a
+	// reorder degrades to "append/prepend" instead of crashing the drag.
+	const prev = ordered[index - 1] ? parseRankOrNull(getRank(ordered[index - 1])) : null;
+	const next = ordered[index + 1] ? parseRankOrNull(getRank(ordered[index + 1])) : null;
+	if (prev && next) {
+		// Equal neighbours (or any `between` failure) can't be split — step past one.
+		if (prev.toString() === next.toString()) return prev.genNext().toString();
+		try {
+			return prev.between(next).toString();
+		} catch {
+			return prev.genNext().toString();
+		}
+	}
+	if (prev) return prev.genNext().toString();
+	if (next) return next.genPrev().toString();
+	return LexoRank.middle().toString();
+}
+
+/** Parse a lexorank, returning null instead of throwing on an empty/invalid value. */
+function parseRankOrNull(rank: string | null | undefined): LexoRank | null {
+	if (!rank) return null;
+	try {
+		return LexoRank.parse(rank);
+	} catch {
+		return null;
+	}
 }
 
 /**

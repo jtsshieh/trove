@@ -2,6 +2,7 @@ import 'dotenv/config';
 
 import { PrismaPg } from '@prisma/adapter-pg';
 import { hash } from 'argon2';
+import { startOfDay } from 'date-fns';
 import { LexoRank } from 'lexorank';
 
 import { PrismaClient } from '../src/generated/prisma/client';
@@ -82,19 +83,22 @@ export async function runSeed() {
 	console.log(`seeded ${brands.length} brands`);
 
 	// ——— Catalog the dev user owns (idempotent by name/attributes) ———
-	async function ensureLuggage(name: string, order: string) {
+	async function ensureLuggage(name: string, order: string, quantity = 1) {
 		const found = await prisma.luggage.findFirst({
 			where: { userId: user.id, name },
 		});
 		return (
 			found ??
-			(await prisma.luggage.create({ data: { name, order, userId: user.id } }))
+			(await prisma.luggage.create({
+				data: { name, order, quantity, userId: user.id },
+			}))
 		);
 	}
 	async function ensureContainer(
 		name: string,
 		type: ContainerType,
 		order: string,
+		quantity = 1,
 	) {
 		const found = await prisma.container.findFirst({
 			where: { userId: user.id, name },
@@ -102,10 +106,13 @@ export async function runSeed() {
 		return (
 			found ??
 			(await prisma.container.create({
-				data: { name, type, order, userId: user.id },
+				data: { name, type, order, quantity, userId: user.id },
 			}))
 		);
 	}
+	// Essentials share a single per-user lexorank scope (mirrors clothing) so the
+	// closet grid + trip picker render in a stable, drag-reorderable order.
+	let essentialRank = LexoRank.middle();
 	async function ensureEssential(name: string, category: EssentialCategory) {
 		const found = await prisma.essential.findFirst({
 			where: { userId: user.id, name },
@@ -113,7 +120,12 @@ export async function runSeed() {
 		return (
 			found ??
 			(await prisma.essential.create({
-				data: { name, category, userId: user.id },
+				data: {
+					name,
+					category,
+					order: (essentialRank = essentialRank.genNext()).toString(),
+					userId: user.id,
+				},
 			}))
 		);
 	}
@@ -159,7 +171,8 @@ export async function runSeed() {
 	}
 
 	let lr = LexoRank.middle();
-	await ensureLuggage('Carry-on', (lr = lr.genNext()).toString());
+	// Carry-on owns 3 so the trip can hold multiple Carry-on suitcases (quantity flow).
+	await ensureLuggage('Carry-on', (lr = lr.genNext()).toString(), 3);
 	await ensureLuggage('Weekender Duffel', (lr = lr.genNext()).toString());
 	let cr = LexoRank.middle();
 	await ensureContainer(
@@ -167,13 +180,17 @@ export async function runSeed() {
 		ContainerType.Essentials,
 		(cr = cr.genNext()).toString(),
 	);
+	// Packing Cube owns 3 so the trip can hold multiple Packing Cubes (quantity flow).
 	await ensureContainer(
 		'Packing Cube',
 		ContainerType.Clothes,
 		(cr = cr.genNext()).toString(),
+		3,
 	);
 
 	await ensureEssential('Toothbrush', EssentialCategory.Toiletry);
+	// A 2nd Toiletry so the closet + trip essentials have same-category items to reorder.
+	await ensureEssential('Shampoo', EssentialCategory.Toiletry);
 	await ensureEssential('Phone Charger', EssentialCategory.Electronic);
 	await ensureEssential('Passport', EssentialCategory.Document);
 
@@ -196,6 +213,14 @@ export async function runSeed() {
 		brandName: 'Uniqlo',
 		typeName: 'Chinos',
 		color: 'Beige',
+	});
+	// A 2nd Chinos so the wardrobe + trip closet panel have same-type items whose
+	// manual order can be reordered and verified (Chinos avoids the count assertions
+	// other specs make on Hoodie/T-shirt/Jeans).
+	await ensureClothing({
+		brandName: 'Uniqlo',
+		typeName: 'Chinos',
+		color: 'Gray',
 	});
 	const socks = await ensureClothing({
 		brandName: 'Nike',
@@ -256,6 +281,12 @@ export async function runSeed() {
 		where: { tripId: trip.id },
 	});
 	if (provisionCount === 0) {
+		// The board derives day buckets with date-fns eachDayOfInterval (local
+		// midnight) and sends that exact instant when creating/moving provisions, so
+		// store the seed's day-placements at the same local-midnight value rather than
+		// the raw UTC trip.start — otherwise day-scoped queries (e.g. the day's last
+		// entry rank) wouldn't match these rows.
+		const day0 = startOfDay(trip.start);
 		let dr = LexoRank.middle();
 		await prisma.clothingProvision.createMany({
 			data: [
@@ -263,14 +294,14 @@ export async function runSeed() {
 					tripId: trip.id,
 					clothingId: hoodie.id,
 					section: ProvisionSection.Day,
-					day: trip.start,
+					day: day0,
 					dayOrder: (dr = dr.genNext()).toString(),
 				},
 				{
 					tripId: trip.id,
 					clothingId: tee.id,
 					section: ProvisionSection.Day,
-					day: trip.start,
+					day: day0,
 					dayOrder: (dr = dr.genNext()).toString(),
 				},
 				{
@@ -292,12 +323,20 @@ export async function runSeed() {
 		});
 		if (cube) {
 			await prisma.containerProvision.create({
-				data: { tripId: trip.id, containerId: cube.id },
+				data: {
+					tripId: trip.id,
+					containerId: cube.id,
+					tripOrder: LexoRank.middle().toString(),
+				},
 			});
 		}
 		if (carryOn) {
 			await prisma.luggageProvision.create({
-				data: { tripId: trip.id, luggageId: carryOn.id },
+				data: {
+					tripId: trip.id,
+					luggageId: carryOn.id,
+					tripOrder: LexoRank.middle().toString(),
+				},
 			});
 		}
 	}

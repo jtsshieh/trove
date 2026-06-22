@@ -24,6 +24,16 @@ model ClothingProvision {
   containerProvisionId String?             @map("container_provision_id")
   containerProvision   ContainerProvision? @relation(fields: [containerProvisionId], references: [id], onDelete: Cascade)
 
+  // Direct-to-luggage packing (a "containerless" item): skips a container and is
+  // packed straight into a suitcase. `containerless` marks the intent even before a
+  // suitcase is chosen; `luggageProvisionId` is the suitcase once assigned. Mutually
+  // exclusive with `containerProvisionId` (enforced in the service layer).
+  containerless Boolean @default(false)
+
+  luggageProvisionId String?           @map("luggage_provision_id")
+  luggageProvision   LuggageProvision? @relation(fields: [luggageProvisionId], references: [id], onDelete: SetNull)
+  luggageOrder       String?           @map("luggage_order")
+
   tripOutfitId String?     @map("trip_outfit_id")
   tripOutfit   TripOutfit? @relation(fields: [tripOutfitId], references: [id], onDelete: SetNull)
 
@@ -52,6 +62,13 @@ model EssentialProvision {
   containerProvisionId String?             @map("container_provision_id")
   containerProvision   ContainerProvision? @relation(fields: [containerProvisionId], references: [id], onDelete: Cascade)
 
+  // Direct-to-luggage packing (a "containerless" item) — see ClothingProvision.
+  containerless Boolean @default(false)
+
+  luggageProvisionId String?           @map("luggage_provision_id")
+  luggageProvision   LuggageProvision? @relation(fields: [luggageProvisionId], references: [id], onDelete: SetNull)
+  luggageOrder       String?           @map("luggage_order")
+
   tripEssentialGroupId String?             @map("trip_essential_group_id")
   tripEssentialGroup   TripEssentialGroup? @relation(fields: [tripEssentialGroupId], references: [id], onDelete: SetNull)
 
@@ -70,6 +87,9 @@ model ContainerProvision {
 
   clothingProvisions  ClothingProvision[]
   essentialProvisions EssentialProvision[]
+
+  // Manual ordering of containers within the trip's containers board (lexorank).
+  tripOrder String? @map("trip_order")
 
   luggageProvisionId String?           @map("luggage_provision_id")
   luggageProvision   LuggageProvision? @relation(fields: [luggageProvisionId], references: [id], onDelete: Cascade)
@@ -91,6 +111,13 @@ model LuggageProvision {
   luggage   Luggage @relation(fields: [luggageId], references: [id], onDelete: Cascade)
 
   containerProvisions ContainerProvision[]
+
+  // Items packed directly into this suitcase without a container (containerless).
+  clothingProvisions  ClothingProvision[]
+  essentialProvisions EssentialProvision[]
+
+  // Manual ordering of suitcases within the trip's luggage board (lexorank).
+  tripOrder String? @map("trip_order")
 
   @@map("luggage_provisions")
 }

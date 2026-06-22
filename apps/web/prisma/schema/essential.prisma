@@ -12,6 +12,11 @@ model Essential {
 
   quantity Int @default(1)
 
+  // Manual closet ordering (lexorank), one ordered scope per user — mirrors
+  // Clothing.order. The closet essentials grid sorts by it and drag-to-reorder
+  // rewrites a single essential's rank.
+  order String @default("")
+
   imageKey String? @map("image_key")
 
   userId String @map("user_id")

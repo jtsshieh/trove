@@ -30,7 +30,7 @@ test('outfits — create an ad-hoc outfit on a day', async ({ page }) => {
 	const day0 = page.getByTestId('day-column').nth(0);
 	await expect(day0.getByTestId('outfit-group')).toHaveCount(0);
 
-	await day0.getByRole('button', { name: 'Outfit' }).click();
+	await day0.getByTestId('add-outfit').click();
 	await page.waitForTimeout(800);
 	await expect(day0.getByTestId('outfit-group')).toHaveCount(1);
 
@@ -48,7 +48,7 @@ test('outfits — drag a loose piece into the outfit group', async ({ page }) =>
 	await gotoBoard(page, '/clothing');
 	const day0 = page.getByTestId('day-column').nth(0);
 
-	await day0.getByRole('button', { name: 'Outfit' }).click();
+	await day0.getByTestId('add-outfit').click();
 	await page.waitForTimeout(800);
 	const group = day0.getByTestId('outfit-group');
 	await expect(group).toHaveCount(1);
@@ -73,7 +73,7 @@ test('outfits — collapsing hides the content (no blank box)', async ({
 	await gotoBoard(page, '/clothing');
 	const day0 = page.getByTestId('day-column').nth(0);
 
-	await day0.getByRole('button', { name: 'Outfit' }).click();
+	await day0.getByTestId('add-outfit').click();
 	await page.waitForTimeout(800);
 	const group = day0.getByTestId('outfit-group');
 	await expect(group).toHaveCount(1);
@@ -103,7 +103,7 @@ test('outfits — save a day grouping as a reusable template', async ({
 	await gotoBoard(page, '/clothing');
 	const day0 = page.getByTestId('day-column').nth(0);
 
-	await day0.getByRole('button', { name: 'Outfit' }).click();
+	await day0.getByTestId('add-outfit').click();
 	await page.waitForTimeout(800);
 	const group = day0.getByTestId('outfit-group');
 	await expect(group).toHaveCount(1);

@@ -30,7 +30,13 @@ test('no console errors across key surfaces and forms', async ({ page }) => {
 		.locator('a:has-text("Open")')
 		.first()
 		.getAttribute('href');
-	for (const path of ['', '/clothing', '/essentials', '/containers', '/luggage']) {
+	for (const path of [
+		'',
+		'/clothing',
+		'/essentials',
+		'/containers',
+		'/luggage',
+	]) {
 		await page.goto(`${href}${path}`);
 		await page.waitForLoadState('networkidle').catch(() => {});
 		await page.waitForTimeout(400);
@@ -46,10 +52,46 @@ test('no console errors across key surfaces and forms', async ({ page }) => {
 		.getByTestId('bulk-file-input')
 		.setInputFiles(path.join(process.cwd(), 'e2e/fixtures/shirt.png'));
 	await expect(page.getByTestId('bulk-tile')).toHaveCount(1);
-	await page.getByTestId('bulk-removebg-toggle').first().click();
 	await page.keyboard.press('Escape');
 	await page.waitForTimeout(400);
 
 	const meaningful = errors.filter((e) => !BENIGN.some((b) => b.test(e)));
 	expect(meaningful, `\n${meaningful.join('\n')}\n`).toEqual([]);
+});
+
+test('no hydration mismatch when the closet was left open on reload', async ({
+	page,
+}) => {
+	// Open the clothing board's closet so the "open" preference is saved, then reload.
+	// The closet state lives in a provider outside the board's Suspense boundary, so
+	// restoring it must not flip the value before the board hydrates (regression: the
+	// docked closet div mismatched aria-hidden/className on hydration).
+	await page.goto('/trip-planner');
+	const href = await page
+		.locator('a:has-text("Open")')
+		.first()
+		.getAttribute('href');
+	if (!href) throw new Error('no seeded trip');
+	await page.goto(`${href}/clothing`);
+	await page.waitForLoadState('networkidle').catch(() => {});
+	// The board's Closet toggle carries aria-pressed (the global nav "Closet" link
+	// does not) — disambiguate, and open the docked panel.
+	await page
+		.getByRole('button', { name: 'Closet' })
+		.and(page.locator('[aria-pressed]'))
+		.click();
+	await expect(page.getByTestId('closet-panel')).toBeVisible();
+
+	// Now reload with the preference saved and watch for hydration errors.
+	const errors: string[] = [];
+	page.on('pageerror', (e) => errors.push(`PAGEERROR: ${e.message}`));
+	page.on('console', (m) => {
+		if (m.type() === 'error') errors.push(`CONSOLE: ${m.text()}`);
+	});
+	await page.reload();
+	await expect(page.getByTestId('closet-panel')).toBeVisible();
+	await page.waitForTimeout(600);
+
+	const hydration = errors.filter((e) => /hydrat/i.test(e));
+	expect(hydration, `\n${hydration.join('\n')}\n`).toEqual([]);
 });

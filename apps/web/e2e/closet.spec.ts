@@ -53,7 +53,9 @@ test('closet — drag a piece from the closet onto a day', async ({ page }) => {
 
 	await dndDrag(
 		page,
-		closet.locator('[data-testid="closet-piece"][data-name="Beige Uniqlo Chinos"]'),
+		closet.locator(
+			'[data-testid="closet-piece"][data-name="Beige Uniqlo Chinos"]',
+		),
 		page.getByTestId('day-column').nth(1),
 	);
 	await page.waitForTimeout(1200);
@@ -68,13 +70,15 @@ test('closet — search filters the draggable catalog', async ({ page }) => {
 	const closet = page.getByTestId('closet-panel');
 	await expect(closet).toBeVisible();
 
-	// The seeded wardrobe has 5 distinct pieces.
-	await expect(closet.locator('[data-testid="closet-piece"]')).toHaveCount(5);
+	// The seeded wardrobe has 6 distinct pieces.
+	await expect(closet.locator('[data-testid="closet-piece"]')).toHaveCount(6);
 
 	await closet.getByPlaceholder('Search your wardrobe…').fill('Levi');
 	await expect(closet.locator('[data-testid="closet-piece"]')).toHaveCount(1);
 	await expect(
-		closet.locator('[data-testid="closet-piece"][data-name="Blue Levi\'s Jeans"]'),
+		closet.locator(
+			'[data-testid="closet-piece"][data-name="Blue Levi\'s Jeans"]',
+		),
 	).toBeVisible();
 });
 
@@ -87,7 +91,7 @@ test('closet — switching to the Outfits tab shows outfit templates', async ({
 	await expect(closet).toBeVisible();
 
 	// Clothes is the default tab: the catalog is shown, outfits are not.
-	await expect(closet.locator('[data-testid="closet-piece"]')).toHaveCount(5);
+	await expect(closet.locator('[data-testid="closet-piece"]')).toHaveCount(6);
 	await expect(closet.locator('[data-testid="closet-outfit"]')).toHaveCount(0);
 
 	await closet.getByRole('tab', { name: 'Outfits' }).click();
@@ -101,5 +105,5 @@ test('closet — switching to the Outfits tab shows outfit templates', async ({
 
 	// And back: the catalog returns.
 	await closet.getByRole('tab', { name: 'Clothes' }).click();
-	await expect(closet.locator('[data-testid="closet-piece"]')).toHaveCount(5);
+	await expect(closet.locator('[data-testid="closet-piece"]')).toHaveCount(6);
 });

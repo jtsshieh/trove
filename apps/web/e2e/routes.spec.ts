@@ -94,5 +94,5 @@ test('every trip-viewer route renders without errors', async ({ page }) => {
 test('packing-gear index redirects into a sub-tab', async ({ page }) => {
 	await page.goto('/closet/packing-gear');
 	await page.waitForLoadState('networkidle').catch(() => {});
-	await expect(page).toHaveURL(/\/trip-planner\/packing-gear\/(containers|luggage)/);
+	await expect(page).toHaveURL(/\/closet\/packing-gear\/(containers|luggage)/);
 });

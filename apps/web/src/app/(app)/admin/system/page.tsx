@@ -1,9 +1,22 @@
+import { HydrationBoundary, dehydrate } from '@tanstack/react-query';
 import React from 'react';
 
+import { getQueryClient } from '@/lib/query-client';
+
+import { getSystemStatus } from './_data/fetchers';
+import { systemStatusQueryOptions } from './_data/queries';
 import { SystemClient } from './system-client';
 
 // Access is gated by the Admin layout (requireAdminPage).
-export default function SystemPage() {
+export default async function SystemPage() {
+	// Seed the status into the cache so the client renders the cards immediately
+	// (no initial spinner) and keeps its on-demand polling from there.
+	const queryClient = getQueryClient();
+	await queryClient.prefetchQuery({
+		...systemStatusQueryOptions,
+		queryFn: getSystemStatus,
+	});
+
 	return (
 		<div className="mx-auto w-full max-w-screen-md">
 			<div className="mb-4 flex flex-col gap-1">
@@ -12,7 +25,9 @@ export default function SystemPage() {
 					Check for and apply updates to this server.
 				</h2>
 			</div>
-			<SystemClient />
+			<HydrationBoundary state={dehydrate(queryClient)}>
+				<SystemClient />
+			</HydrationBoundary>
 		</div>
 	);
 }

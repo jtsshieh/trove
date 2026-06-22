@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from 'react';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { EssentialBulkAddDialog } from './essential-bulk-add-dialog';
@@ -30,7 +31,9 @@ export function EssentialsTabs() {
 							<CreateEssentialDialog />
 						</>
 					) : (
-						<Suspense fallback={null}>
+						<Suspense
+							fallback={<Skeleton className="size-9 sm:h-10 sm:w-32" />}
+						>
 							<CreateEssentialGroupDialog />
 						</Suspense>
 					)}

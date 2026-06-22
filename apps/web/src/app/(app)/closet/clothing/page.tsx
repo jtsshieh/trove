@@ -16,22 +16,21 @@ import { WardrobeTabs } from './wardrobe-tabs';
 import { ClothingTypesManager } from './types/clothing-types-manager';
 
 export default async function WardrobePage() {
-	// Prefetch what the TAB BAR's action buttons need (brands + types for the Add
-	// Clothing dialog) and hydrate it around the whole tab component — those actions
-	// live in the tab bar (a client component), so without a HydrationBoundary their
-	// useSuspenseQuery would run server-side and try to fetch the relative /api route.
+	// The title + tab bar must paint instantly, so we only await the cheap settings
+	// read. The tab bar's action buttons (Add Clothing) need brands + types: fire
+	// that prefetch WITHOUT awaiting — the query client dehydrates the still-pending
+	// queries, so they stream to the client (which shows a button skeleton until
+	// they resolve) instead of blocking the whole page.
 	const queryClient = getQueryClient();
-	const [, , settings] = await Promise.all([
-		queryClient.prefetchQuery({
-			queryKey: brandsQueryOptions.queryKey,
-			queryFn: getAllBrands,
-		}),
-		queryClient.prefetchQuery({
-			queryKey: clothingTypesQueryOptions.queryKey,
-			queryFn: getAllClothingTypesWithClothes,
-		}),
-		getUserSettings(),
-	]);
+	const settings = await getUserSettings();
+	void queryClient.prefetchQuery({
+		queryKey: brandsQueryOptions.queryKey,
+		queryFn: getAllBrands,
+	});
+	void queryClient.prefetchQuery({
+		queryKey: clothingTypesQueryOptions.queryKey,
+		queryFn: getAllClothingTypesWithClothes,
+	});
 
 	return (
 		<div className="flex w-full flex-1 justify-center">

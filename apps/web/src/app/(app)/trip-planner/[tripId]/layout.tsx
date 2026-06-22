@@ -1,4 +1,3 @@
-import { LoaderCircle } from 'lucide-react';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import React, { ReactNode, Suspense } from 'react';
@@ -7,11 +6,21 @@ import { AppShell } from '@/components/app-shell/app-shell';
 import { DisplayModeProvider } from '@/components/display-mode';
 import { getCurrentUserSafe, getUserSettings, isAdmin } from '@/lib/auth';
 
+import {
+	MobileTripNavSkeleton,
+	TripSideNavSkeleton,
+} from './_components/trip-nav-skeleton';
 import { getTrip } from './_data/fetchers';
 import { SIDEBAR_COOKIE } from './sidebar-cookie';
 import { MobileTripNav, TripSideNav } from './trip-nav';
 
-async function TripViewerLayout({
+/**
+ * The trip-viewer frame: it awaits only the cheap reads needed to paint the shell
+ * (current user, settings, the sidebar-collapsed cookie) and renders immediately.
+ * The heavy getTrip read — which the rail's heading + mode-gated nav depend on —
+ * streams in its own <Suspense> so navigating into a trip never blocks on the DB.
+ */
+export default async function TripViewerLayout({
 	children,
 	params,
 }: {
@@ -19,13 +28,11 @@ async function TripViewerLayout({
 	params: Promise<{ tripId: string }>;
 }) {
 	const { tripId } = await params;
-	const [trip, settings, cookieStore, user] = await Promise.all([
-		getTrip(tripId),
+	const [settings, cookieStore, user] = await Promise.all([
 		getUserSettings(),
 		cookies(),
 		getCurrentUserSafe(),
 	]);
-	if (!trip) return notFound();
 
 	const navCollapsed = cookieStore.get(SIDEBAR_COOKIE)?.value === 'true';
 
@@ -40,10 +47,16 @@ async function TripViewerLayout({
 			<DisplayModeProvider initial={settings.displayMode}>
 				<div className="flex min-h-0 w-full flex-1 flex-col md:flex-row">
 					<div className="hidden md:block">
-						<TripSideNav trip={trip} defaultCollapsed={navCollapsed} />
+						<Suspense
+							fallback={<TripSideNavSkeleton collapsed={navCollapsed} />}
+						>
+							<TripSideNavData tripId={tripId} collapsed={navCollapsed} />
+						</Suspense>
 					</div>
 					<div className="w-full border-b p-2 px-4 md:hidden">
-						<MobileTripNav trip={trip} />
+						<Suspense fallback={<MobileTripNavSkeleton />}>
+							<MobileTripNavData tripId={tripId} />
+						</Suspense>
 					</div>
 					<div className="bg-surface-sunken flex min-h-0 flex-1 scroll-pt-20 flex-col overflow-y-auto scroll-smooth p-4 sm:p-8">
 						{children}
@@ -54,21 +67,22 @@ async function TripViewerLayout({
 	);
 }
 
-function TripViewerLoading() {
-	return (
-		<div className="flex h-svh w-screen items-center justify-center">
-			<LoaderCircle className="h-8 w-8 animate-spin" />
-		</div>
-	);
+/** Awaits the cache()d trip and renders the desktop rail (one DB hit per request). */
+async function TripSideNavData({
+	tripId,
+	collapsed,
+}: {
+	tripId: string;
+	collapsed: boolean;
+}) {
+	const trip = await getTrip(tripId);
+	if (!trip) return notFound();
+	return <TripSideNav trip={trip} defaultCollapsed={collapsed} />;
 }
 
-export default function TripViewerLayoutSuspended(props: {
-	children: ReactNode;
-	params: Promise<{ tripId: string }>;
-}) {
-	return (
-		<Suspense fallback={<TripViewerLoading />}>
-			<TripViewerLayout {...props} />
-		</Suspense>
-	);
+/** Awaits the same cache()d trip and renders the mobile nav trigger. */
+async function MobileTripNavData({ tripId }: { tripId: string }) {
+	const trip = await getTrip(tripId);
+	if (!trip) return notFound();
+	return <MobileTripNav trip={trip} />;
 }

@@ -3,6 +3,7 @@
 import { Suspense, useState, type ReactNode } from 'react';
 
 import { DisplayModeProvider } from '@/components/display-mode';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { DisplayMode } from '@/generated/prisma/enums';
@@ -38,7 +39,7 @@ export function WardrobeTabs({
 					</TabsList>
 					<div className="flex items-center gap-2">
 						{tab === 'clothes' && (
-							<Suspense fallback={null}>
+							<Suspense fallback={<ClothesTabActionsSkeleton />}>
 								<ClothesTabActions />
 							</Suspense>
 						)}
@@ -57,5 +58,15 @@ export function WardrobeTabs({
 				</TabsContent>
 			</Tabs>
 		</DisplayModeProvider>
+	);
+}
+
+/** Button-sized placeholders matching the Bulk add + Add Clothing triggers. */
+function ClothesTabActionsSkeleton() {
+	return (
+		<>
+			<Skeleton className="size-9 sm:h-10 sm:w-28" />
+			<Skeleton className="size-9 sm:h-10 sm:w-36" />
+		</>
 	);
 }

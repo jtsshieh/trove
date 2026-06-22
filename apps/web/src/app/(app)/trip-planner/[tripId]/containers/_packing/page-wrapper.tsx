@@ -1,21 +1,18 @@
 'use client';
 
 import { useSuspenseQuery } from '@tanstack/react-query';
-import { Box } from 'lucide-react';
 
 import { ContainerType } from '@/generated/prisma/enums';
 
-import { TripPageHeader } from '../../_components/trip-page-header';
 import { ContainerPackList } from './containers-pack-list';
 import { containerPackingBoardQueryOptions } from './_data/queries';
 
 /**
- * Reads the dehydrated board cache (container provisions + their packed items) and
- * feeds the packing board island. Packing toggles invalidate this query so the whole
- * board (and its progress tallies) re-derives from one refetch — no prop-drilled
- * server snapshot.
+ * The streamed header actions for the packing board — the ready/total tally,
+ * derived from the dehydrated cache. Packing toggles invalidate this query so the
+ * count stays in sync.
  */
-export function ContainerPackingContent({ tripId }: { tripId: string }) {
+export function ContainerPackingActions({ tripId }: { tripId: string }) {
 	const { data: trip } = useSuspenseQuery(
 		containerPackingBoardQueryOptions(tripId),
 	);
@@ -33,23 +30,26 @@ export function ContainerPackingContent({ tripId }: { tripId: string }) {
 
 	const toPack = trip.containerProvisions.length;
 
-	return (
-		<>
-			<TripPageHeader
-				icon={<Box />}
-				title="Pack containers"
-				description="Check off each item as it goes into its container."
-				actions={
-					toPack > 0 && (
-						<span className="text-muted-foreground text-sm tabular-nums">
-							<span className="text-foreground font-semibold">{packed}</span> /{' '}
-							{toPack} ready
-						</span>
-					)
-				}
-			/>
+	if (toPack === 0) return null;
 
-			<ContainerPackList tripId={tripId} trip={trip} />
-		</>
+	return (
+		<span className="text-muted-foreground text-sm tabular-nums">
+			<span className="text-foreground font-semibold">{packed}</span> / {toPack}{' '}
+			ready
+		</span>
 	);
+}
+
+/**
+ * Reads the dehydrated board cache (container provisions + their packed items) and
+ * feeds the packing board island. Packing toggles invalidate this query so the whole
+ * board (and its progress tallies) re-derives from one refetch — no prop-drilled
+ * server snapshot.
+ */
+export function ContainerPackingContent({ tripId }: { tripId: string }) {
+	const { data: trip } = useSuspenseQuery(
+		containerPackingBoardQueryOptions(tripId),
+	);
+
+	return <ContainerPackList tripId={tripId} trip={trip} />;
 }

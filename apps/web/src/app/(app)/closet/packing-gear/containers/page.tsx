@@ -6,23 +6,39 @@ import { getQueryClient } from '@/lib/query-client';
 
 import { getAllContainers } from './_data/fetchers';
 import { containersQueryOptions } from './_data/queries';
-import { ContainerWrapper } from './page-wrapper';
+import { ContainerBulkAddDialog } from './container-bulk-add-dialog';
+import { CreateContainerDialog } from './container-dialogs';
+import { ContainerGrid } from './page-wrapper';
 
+/**
+ * The static toolbar (description + Add buttons) paints instantly — the page title
+ * and nav already render from packing-gear/layout.tsx. Only the grid streams: this
+ * server component seeds the query cache and hands the dehydrated cache to the grid,
+ * which reads it via useSuspenseQuery.
+ */
 export default function ContainersPage() {
 	return (
-		<Suspense fallback={<ContainersSkeleton />}>
-			<ContainersData />
-		</Suspense>
+		<>
+			<div className="mb-4 flex items-center justify-between gap-4">
+				<div>
+					<p className="text-base text-neutral-600">
+						Containers are smaller containers, like packing cubes or toiletry
+						bags, that are packed in luggage.
+					</p>
+				</div>
+				<div className="flex gap-2">
+					<ContainerBulkAddDialog />
+					<CreateContainerDialog />
+				</div>
+			</div>
+			<Suspense fallback={<ContainerGridSkeleton />}>
+				<ContainersData />
+			</Suspense>
+		</>
 	);
 }
 
-/**
- * Streams the containers list: the page shell paints immediately while this server
- * component prefetches into the query cache (using the direct DB loader as the
- * queryFn) and hands the dehydrated cache to the client. The client's
- * useSuspenseQuery reads from that cache — it never calls its own fetch queryFn
- * during the initial render.
- */
+/** Streams the containers grid; seeds the cache with the direct DB loader. */
 async function ContainersData() {
 	const queryClient = getQueryClient();
 	await queryClient.prefetchQuery({
@@ -32,26 +48,17 @@ async function ContainersData() {
 
 	return (
 		<HydrationBoundary state={dehydrate(queryClient)}>
-			<ContainerWrapper />
+			<ContainerGrid />
 		</HydrationBoundary>
 	);
 }
 
-function ContainersSkeleton() {
+function ContainerGridSkeleton() {
 	return (
-		<>
-			<div className="mb-4 flex items-center justify-between gap-4">
-				<Skeleton className="h-5 w-96 max-w-full" />
-				<div className="flex gap-2">
-					<Skeleton className="size-9" />
-					<Skeleton className="h-9 w-32" />
-				</div>
-			</div>
-			<div className="grid auto-rows-fr grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-				{Array.from({ length: 5 }).map((_, i) => (
-					<Skeleton key={i} className="h-32 w-full rounded-xl" />
-				))}
-			</div>
-		</>
+		<div className="grid auto-rows-fr grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+			{Array.from({ length: 5 }).map((_, i) => (
+				<Skeleton key={i} className="h-32 w-full rounded-xl" />
+			))}
+		</div>
 	);
 }

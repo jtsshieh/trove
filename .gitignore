@@ -1,20 +1,22 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Monorepo root: patterns without a leading/internal slash match at any depth
+# (so they apply to apps/web, apps/updater, deploy, etc.).
 
 # dependencies
-/node_modules
-/.pnp
+node_modules/
+.pnp
 .pnp.js
 .yarn/install-state.gz
 
 # testing
-/coverage
+coverage/
 
 # next.js
-/.next/
-/out/
+.next/
+out/
 
 # production
-/build
+build/
 
 # misc
 .DS_Store
@@ -25,7 +27,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
+# env files — matches apps/web/.env, deploy/.env, etc.
+.env
 .env*.local
 
 # vercel
@@ -36,26 +39,23 @@ yarn-error.log*
 next-env.d.ts
 
 # prisma (generated client)
-/src/generated
-
-.env
-
-certificates
+apps/web/src/generated/
 
 # production TLS cert/key (mkcert) + updater deploy state — live only on the NAS
-/certs/
+deploy/certs/
 .deploy-state.json
+
 # e2e test artifacts
-/e2e/*.png
+apps/web/e2e/*.png
+apps/web/e2e/.auth/
 
 # Playwright
-/e2e/.auth/
-/test-results/
-/playwright-report/
-/blob-report/
+test-results/
+playwright-report/
+blob-report/
 
 # downloaded model weights (LaMa inpainting, etc.)
-/.cache/
+.cache/
 
 # JetBrains local datasource config (connection settings, not project code)
 /.idea/dataSources/

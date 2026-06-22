@@ -1,54 +1,76 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# closet
 
-## Getting Started
+A self-hosted closet / outfit / trip-packing app, deployed to a Synology NAS.
 
-The app runs locally, while its data services (Postgres + Redis) run in Docker.
+## Repository layout
 
-1. **Set up environment variables.** Copy the example file and fill in secrets
-   (or use the values already generated in `.env`):
+This is a directory monorepo — one git repo, multiple self-contained deployables,
+orchestrated by docker-compose. There is no JS monorepo tool; each app builds from
+its own directory with its own Dockerfile.
 
-   ```bash
-   cp .env.example .env
-   # generate secrets:
-   #   POSTGRES_PASSWORD -> openssl rand -hex 24   (also update it inside DATABASE_URL)
-   #   JWT_SECRET        -> openssl rand -base64 48
-   ```
+```
+apps/
+  web/        Next.js app (the product). Own package.json, Prisma, Dockerfile.
+  updater/    Zero-dependency Docker-socket supervisor that drives one-click
+              in-app updates (git pull → compose build → migrate → restart).
+  ml/         (future) Python image-processing service.
+deploy/       All infra, separated from app code:
+  compose.dev.yaml      dev data services (Postgres, Redis, MinIO)
+  compose.prod.yaml     full prod stack (app, migrate, updater, edge, data)
+  Caddyfile  edge/      LAN edge: TLS for closet.local + mDNS
+  bootstrap.sh          first-time / manual deploy on the NAS
+  .env.production.example
+  certs/                NAS-only TLS cert/key (git-ignored)
+Makefile      convenience targets (see `make help`)
+```
 
-2. **Start the data services** (Postgres + Redis, with persistent volumes):
+## Local development
 
-   ```bash
-   docker compose up -d
-   ```
+The app runs locally (`apps/web`); its data services run in Docker. Dev uses a
+single env file at `apps/web/.env` — the app reads it directly, and the dev compose
+file is pointed at the same file.
 
-3. **Install dependencies and apply the database schema:**
+```bash
+cp apps/web/.env.example apps/web/.env   # then fill in secrets:
+#   POSTGRES_PASSWORD -> openssl rand -hex 24   (also set it inside DATABASE_URL)
+#   JWT_SECRET        -> openssl rand -base64 48
 
-   ```bash
-   npm install
-   npx prisma migrate deploy   # or `prisma migrate dev` while iterating on the schema
-   ```
+make install        # npm ci in apps/web
+make db-up          # start Postgres + Redis + MinIO
+make migrate        # apply Prisma migrations
+make dev            # data services + Next.js dev server
+```
 
-4. **Run the dev server:**
+Open <http://localhost:3000/sign-in>. Stop data services with `make db-down`
+(`make db-down ARGS=-v` also wipes the volumes). Run `make help` for all targets.
 
-   ```bash
-   npm run dev
-   ```
+Equivalent raw commands (no make):
 
-Open [http://localhost:3000/sign-in](http://localhost:3000/sign-in) in your browser.
+```bash
+docker compose --env-file apps/web/.env -f deploy/compose.dev.yaml up -d
+npm --prefix apps/web run db:migrate
+npm --prefix apps/web run dev
+```
 
-Stop the data services with `docker compose down` (add `-v` to also wipe the
-Postgres/Redis volumes).
+## Production (Synology NAS)
 
-## Learn More
+The prod stack lives in `deploy/compose.prod.yaml`. `edge` (Caddy + Avahi) is the
+only LAN-facing container; everything else is on an internal network. The `updater`
+holds the Docker socket and a bind-mount of the repo so it can self-update.
 
-To learn more about Next.js, take a look at the following resources:
+First-time / manual deploy on the NAS:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+cd "$REPO_DIR"
+git pull --ff-only
+cp deploy/.env.production.example deploy/.env   # fill in, place TLS pair in deploy/certs/
+deploy/bootstrap.sh        # build + start the whole stack (or: make deploy)
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+Thereafter, update from **Admin → System → Check for updates** in the app.
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+> **Note:** changes that move `deploy/` or the updater itself cannot ship via the
+> in-app updater (it never recreates its own container). Apply those once with
+> `deploy/bootstrap.sh` on the NAS; in-app updates resume afterward. The compose
+> project name (`closet`) is fixed so named volumes — and your data —
+> survive across deploys.

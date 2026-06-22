@@ -31,6 +31,9 @@ yarn-error.log*
 .env
 .env*.local
 
+# local-only compose override for testing the prod stack on a dev machine
+deploy/compose.local.yaml
+
 # vercel
 .vercel
 

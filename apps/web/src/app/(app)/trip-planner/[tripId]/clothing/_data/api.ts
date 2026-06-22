@@ -80,6 +80,9 @@ export const moveTripOutfitToDay = (
 	input: MoveTripOutfitToDayInput,
 ) => api.patch<MutationResult>(`/api/trip-outfits/${id}/move`, input);
 
+export const changeTripOutfitOrder = (id: string, order: string) =>
+	api.patch<MutationResult>(`/api/trip-outfits/${id}/order`, { order });
+
 export const deleteTripOutfit = (id: string) =>
 	api.del<MutationResult>(`/api/trip-outfits/${id}`);
 

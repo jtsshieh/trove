@@ -5,10 +5,12 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ItemDisplay } from '@/components/ui/item-display';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { generateClothingName } from '@/lib/generate-clothing-name';
 import { cn } from '@/lib/utils';
 
 import type { LuggagePackingBoard } from './_data/api';
 import { ContainerPackItem } from './container-item';
+import { DirectPackItem } from './direct-item';
 
 interface LuggagePackListProps {
 	tripId: string;
@@ -30,11 +32,27 @@ export function LuggagePackList({ tripId, trip }: LuggagePackListProps) {
 		<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
 			{trip.luggageProvisions.map((luggageProvision) => {
 				const containers = luggageProvision.containerProvisions;
-				const packed = containers.reduce(
-					(prev, cp) => (cp.packed ? prev + 1 : prev),
-					0,
-				);
-				const toPack = containers.length;
+				// Direct items packed straight into this suitcase (no container).
+				const directItems = [
+					...luggageProvision.clothingProvisions.map((p) => ({
+						id: p.id,
+						kind: 'clothing' as const,
+						name: generateClothingName(p.clothing),
+						imageKey: p.clothing.imageKey,
+						packed: p.packed,
+					})),
+					...luggageProvision.essentialProvisions.map((p) => ({
+						id: p.id,
+						kind: 'essential' as const,
+						name: p.essential.name,
+						imageKey: p.essential.imageKey,
+						packed: p.packed,
+					})),
+				];
+				const packed =
+					containers.reduce((prev, cp) => (cp.packed ? prev + 1 : prev), 0) +
+					directItems.reduce((prev, it) => (it.packed ? prev + 1 : prev), 0);
+				const toPack = containers.length + directItems.length;
 				const complete = toPack > 0 && packed === toPack;
 
 				return (
@@ -57,7 +75,7 @@ export function LuggagePackList({ tripId, trip }: LuggagePackListProps) {
 										{luggageProvision.luggage.name}
 									</p>
 									<p className="text-muted-foreground text-xs tabular-nums">
-										{toPack} {toPack === 1 ? 'container' : 'containers'}
+										{toPack} {toPack === 1 ? 'item' : 'items'} to pack
 									</p>
 								</div>
 								<div className="text-muted-foreground flex shrink-0 items-center gap-1.5 text-sm tabular-nums">
@@ -75,7 +93,7 @@ export function LuggagePackList({ tripId, trip }: LuggagePackListProps) {
 
 							{toPack === 0 ? (
 								<p className="bg-surface-sunken text-muted-foreground rounded-md px-3 py-4 text-center text-xs">
-									No containers assigned to this bag yet.
+									Nothing assigned to this bag yet.
 								</p>
 							) : (
 								<div className="flex flex-col">
@@ -87,6 +105,17 @@ export function LuggagePackList({ tripId, trip }: LuggagePackListProps) {
 											containerName={container.name}
 											imageKey={container.imageKey}
 											packed={packed}
+										/>
+									))}
+									{directItems.map((item) => (
+										<DirectPackItem
+											key={item.id}
+											tripId={tripId}
+											provisionId={item.id}
+											kind={item.kind}
+											name={item.name}
+											imageKey={item.imageKey}
+											packed={item.packed}
 										/>
 									))}
 								</div>

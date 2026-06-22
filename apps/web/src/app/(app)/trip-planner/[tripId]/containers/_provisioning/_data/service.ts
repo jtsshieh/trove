@@ -6,6 +6,7 @@ import {
 	requireTrip,
 } from '@/lib/api/ownership';
 import { prisma } from '@/lib/db.server';
+import { rankAfter } from '@/lib/dnd/lexorank';
 
 import type {
 	CreateContainerProvisionInput,
@@ -20,23 +21,107 @@ import type {
  * invalidates the board query.
  */
 
-/** Add one of the user's containers (catalog) to the trip → a ContainerProvision. */
+/**
+ * Add `count` of the user's container (catalog) to the trip → one ContainerProvision
+ * per unit, each its own card. Capped at how many of that container the user still has
+ * free (owned quantity minus the count already on this trip). Each new row gets the
+ * next tripOrder rank so the cards keep a stable, reorderable order.
+ */
 export async function createContainerProvision(
 	userId: string,
 	tripId: string,
-	{ containerId }: CreateContainerProvisionInput,
+	{ containerId, count = 1 }: CreateContainerProvisionInput,
 ) {
 	await requireTrip(userId, tripId);
-	await requireContainer(userId, containerId);
+	const container = await requireContainer(userId, containerId);
 
-	await prisma.containerProvision.create({
+	const onTrip = await prisma.containerProvision.count({
+		where: { tripId, containerId },
+	});
+	const free = Math.max(0, container.quantity - onTrip);
+	if (free === 0) {
+		return {
+			type: 'warning' as const,
+			message: 'Already at the owned quantity for this container',
+		};
+	}
+	const toAdd = Math.min(count, free);
+
+	const last = await prisma.containerProvision.findFirst({
+		where: { tripId },
+		orderBy: { tripOrder: 'desc' },
+		select: { tripOrder: true },
+	});
+	let rank: string | null = last?.tripOrder ?? null;
+	const data = Array.from({ length: toAdd }, () => {
+		rank = rankAfter(rank);
+		return { tripId, containerId, tripOrder: rank };
+	});
+	await prisma.containerProvision.createMany({ data });
+
+	return {
+		type: 'success' as const,
+		message:
+			toAdd === 1 ? 'Container added to trip' : `Added ${toAdd} containers`,
+	};
+}
+
+/** Reorder a container provision's card within the trip's containers board. */
+export async function changeContainerProvisionTripOrder(
+	userId: string,
+	containerProvisionId: string,
+	tripOrder: string,
+) {
+	await requireContainerProvision(userId, containerProvisionId);
+
+	await prisma.containerProvision.update({
+		where: { id: containerProvisionId },
+		data: { tripOrder },
+	});
+
+	return { type: 'success' as const, message: 'Reordered' };
+}
+
+/**
+ * Mark a clothing piece "containerless" — packed directly into a suitcase rather than
+ * into a container. Clears any container assignment; the piece then shows in the
+ * luggage board's pool until dragged into a specific suitcase.
+ */
+export async function setClothingProvisionContainerless(
+	userId: string,
+	clothingProvisionId: string,
+) {
+	await requireClothingProvision(userId, clothingProvisionId);
+
+	await prisma.clothingProvision.update({
+		where: { id: clothingProvisionId },
 		data: {
-			trip: { connect: { id: tripId } },
-			container: { connect: { id: containerId } },
+			containerless: true,
+			containerProvisionId: null,
+			containerOrder: null,
 		},
 	});
 
-	return { type: 'success' as const, message: 'Container added to trip' };
+	return { type: 'success' as const, message: 'Marked direct-to-luggage' };
+}
+
+/** Mark an essential "containerless" — packed directly into a suitcase. */
+export async function setEssentialProvisionContainerless(
+	userId: string,
+	essentialProvisionId: string,
+) {
+	await requireEssentialProvision(userId, essentialProvisionId);
+
+	await prisma.essentialProvision.update({
+		where: { id: essentialProvisionId },
+		data: {
+			containerless: true,
+			containerProvisionId: null,
+			containerOrder: null,
+		},
+	});
+
+	return { type: 'success' as const, message: 'Marked direct-to-luggage' };
 }
 
 /** Take a container off the trip; its items return to the Unassigned pool (SetNull). */
@@ -89,7 +174,11 @@ export async function changeClothingProvisionContainerOrder(
 	return { type: 'success' as const, message: 'Reordered' };
 }
 
-/** Pull a clothing piece out of its container, back into the Unassigned pool. */
+/**
+ * Pull a clothing piece back into the Unassigned pool — from a container OR from the
+ * "containerless" (direct-to-luggage) state. Fully resets every packing field so the
+ * piece is truly unassigned again.
+ */
 export async function deleteClothingProvisionFromContainer(
 	userId: string,
 	clothingProvisionId: string,
@@ -98,7 +187,13 @@ export async function deleteClothingProvisionFromContainer(
 
 	await prisma.clothingProvision.update({
 		where: { id: clothingProvisionId },
-		data: { containerOrder: null, containerProvisionId: null },
+		data: {
+			containerOrder: null,
+			containerProvisionId: null,
+			containerless: false,
+			luggageProvisionId: null,
+			luggageOrder: null,
+		},
 	});
 
 	return { type: 'success' as const, message: 'Unpacked' };
@@ -140,7 +235,10 @@ export async function changeEssentialProvisionContainerOrder(
 	return { type: 'success' as const, message: 'Reordered' };
 }
 
-/** Pull an essential out of its container, back into the Unassigned pool. */
+/**
+ * Pull an essential back into the Unassigned pool — from a container OR from the
+ * "containerless" (direct-to-luggage) state. Fully resets every packing field.
+ */
 export async function deleteEssentialProvisionFromContainer(
 	userId: string,
 	essentialProvisionId: string,
@@ -149,7 +247,13 @@ export async function deleteEssentialProvisionFromContainer(
 
 	await prisma.essentialProvision.update({
 		where: { id: essentialProvisionId },
-		data: { containerOrder: null, containerProvisionId: null },
+		data: {
+			containerOrder: null,
+			containerProvisionId: null,
+			containerless: false,
+			luggageProvisionId: null,
+			luggageOrder: null,
+		},
 	});
 
 	return { type: 'success' as const, message: 'Unpacked' };

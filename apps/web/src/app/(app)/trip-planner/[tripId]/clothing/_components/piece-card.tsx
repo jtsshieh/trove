@@ -68,7 +68,10 @@ export function PieceCard({
 			index={index}
 			type="clothing"
 			zone={zone}
-			accept={['clothing']}
+			// On a day, pieces and outfits share one list, so a piece must also be a
+			// valid drop neighbour for an outfit being repositioned. Elsewhere
+			// (outfit interior, Universal/Backup) only clothing sorts here.
+			accept={zone.kind === 'day' ? ['clothing', 'trip-outfit'] : ['clothing']}
 		>
 			{({ ref, handleRef, isDragging, isDropTarget }) =>
 				imageForward ? (

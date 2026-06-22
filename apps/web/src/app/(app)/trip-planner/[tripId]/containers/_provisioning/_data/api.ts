@@ -26,6 +26,23 @@ export const createContainerProvision = (
 export const deleteContainerProvision = (id: string) =>
 	api.del<MutationResult>(`/api/container-provisions/${id}`);
 
+export const changeContainerProvisionTripOrder = (
+	id: string,
+	tripOrder: string,
+) =>
+	api.patch<MutationResult>(`/api/container-provisions/${id}/order`, {
+		tripOrder,
+	});
+
+export const setClothingProvisionContainerless = (id: string) =>
+	api.patch<MutationResult>(`/api/clothing-provisions/${id}/containerless`, {});
+
+export const setEssentialProvisionContainerless = (id: string) =>
+	api.patch<MutationResult>(
+		`/api/essential-provisions/${id}/containerless`,
+		{},
+	);
+
 export const moveClothingProvisionToContainer = (
 	id: string,
 	input: MoveProvisionToContainerInput,

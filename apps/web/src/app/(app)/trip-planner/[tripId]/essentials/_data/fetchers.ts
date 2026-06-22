@@ -31,7 +31,9 @@ export const getClosetEssentials = cache(async () => {
 	const user = await getCurrentUserSafe();
 	return prisma.essential.findMany({
 		where: { userId: user.id },
-		orderBy: [{ category: 'asc' }, { name: 'asc' }],
+		// Manual closet order (lexorank); the picker groups by category client-side,
+		// so a global order sort preserves the user's order within each category.
+		orderBy: [{ order: 'asc' }],
 	});
 });
 

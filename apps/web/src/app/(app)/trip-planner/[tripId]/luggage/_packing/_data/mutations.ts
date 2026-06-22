@@ -36,3 +36,25 @@ export function useMarkContainerPacked(tripId: string) {
 		onError: onMutationError,
 	});
 }
+
+/** Toggle a direct (containerless) clothing item's packed flag in its suitcase. */
+export function useMarkClothingPacked(tripId: string) {
+	const invalidate = useInvalidateBoard(tripId);
+	return useMutation({
+		mutationFn: ({ id, packed }: { id: string; packed: boolean }) =>
+			api.markClothingPacked(id, { packed }),
+		onSuccess: invalidate,
+		onError: onMutationError,
+	});
+}
+
+/** Toggle a direct (containerless) essential's packed flag in its suitcase. */
+export function useMarkEssentialPacked(tripId: string) {
+	const invalidate = useInvalidateBoard(tripId);
+	return useMutation({
+		mutationFn: ({ id, packed }: { id: string; packed: boolean }) =>
+			api.markEssentialPacked(id, { packed }),
+		onSuccess: invalidate,
+		onError: onMutationError,
+	});
+}

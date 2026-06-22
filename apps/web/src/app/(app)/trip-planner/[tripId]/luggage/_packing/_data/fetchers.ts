@@ -16,7 +16,7 @@ export const getLuggagePackingBoard = cache(async (tripId: string) => {
 		where: { id: tripId, userId: currentUser.id },
 		include: {
 			luggageProvisions: {
-				orderBy: { luggage: { order: 'asc' } },
+				orderBy: [{ tripOrder: 'asc' }, { luggage: { order: 'asc' } }],
 				include: {
 					containerProvisions: {
 						include: {
@@ -24,6 +24,15 @@ export const getLuggagePackingBoard = cache(async (tripId: string) => {
 							essentialProvisions: true,
 							container: true,
 						},
+					},
+					// Direct ("containerless") items packed straight into this suitcase.
+					clothingProvisions: {
+						include: { clothing: true },
+						orderBy: { luggageOrder: 'asc' },
+					},
+					essentialProvisions: {
+						include: { essential: true },
+						orderBy: { luggageOrder: 'asc' },
 					},
 					luggage: true,
 				},

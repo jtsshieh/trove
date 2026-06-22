@@ -16,7 +16,7 @@ export const getContainersBoard = cache(async (tripId: string) => {
 		where: { id: tripId, userId: user.id },
 		include: {
 			containerProvisions: {
-				orderBy: { container: { order: 'asc' } },
+				orderBy: [{ tripOrder: 'asc' }, { container: { order: 'asc' } }],
 				include: {
 					container: true,
 					clothingProvisions: {
@@ -62,8 +62,15 @@ export const getContainerBoardData = cache(async (tripId: string) => {
 	]);
 	if (!board) return null;
 
-	const onTrip = new Set(board.containerProvisions.map((cp) => cp.containerId));
-	const available = containers.filter((c) => !onTrip.has(c.id));
+	// Offer a container as long as the user still has units of it free (owned quantity
+	// minus how many are already on this trip). Each unit becomes its own card, so a
+	// 3-of-a-kind container can be added up to three times.
+	const onTrip = new Map<string, number>();
+	for (const cp of board.containerProvisions)
+		onTrip.set(cp.containerId, (onTrip.get(cp.containerId) ?? 0) + 1);
+	const available = containers
+		.map((c) => ({ ...c, remaining: c.quantity - (onTrip.get(c.id) ?? 0) }))
+		.filter((c) => c.remaining > 0);
 
 	return { board, available };
 });

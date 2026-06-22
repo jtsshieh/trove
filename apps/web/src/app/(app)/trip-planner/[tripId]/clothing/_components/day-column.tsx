@@ -4,7 +4,7 @@ import { Plus, Shirt } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { format, isToday } from 'date-fns';
 
-import { DropZone } from '@/components/dnd';
+import { DropZone, Sortable } from '@/components/dnd';
 import { Button } from '@/components/ui/button';
 import type { ItemDisplaySize } from '@/components/ui/item-display';
 import type { Zone } from '@/lib/dnd/zone';
@@ -25,13 +25,21 @@ export interface PieceStack {
 	count: number;
 }
 
+/**
+ * One entry in a day's single interleaved list: either a loose clothing stack or an
+ * outfit grouping (with its own pieces). Their array order IS the on-screen order, so
+ * an outfit can sit anywhere among the loose pieces.
+ */
+export type DayEntry =
+	| { kind: 'piece'; stack: PieceStack }
+	| { kind: 'outfit'; outfit: BoardOutfit; pieces: PieceStack[] };
+
 export interface DayBucket {
 	day: Date;
 	/** Canonical day key (local-midnight ISO) shared with the board's zone ids. */
 	key: string;
 	note: string;
-	loose: PieceStack[];
-	outfits: { outfit: BoardOutfit; pieces: PieceStack[] }[];
+	entries: DayEntry[];
 }
 
 /**
@@ -61,7 +69,7 @@ export function DayColumn({
 	/** "Large" piece-size mode: prominent picture-on-top cards in a fill grid. */
 	large?: boolean;
 }) {
-	const { day, key, note, loose, outfits } = bucket;
+	const { day, key, note, entries } = bucket;
 	const looseZone: Zone = { kind: 'day', ownerId: key };
 	// Large mode renders prominent vertical cards in both views; otherwise the
 	// calendar stays image-forward (calendar-box) and the list stays inline chips.
@@ -70,7 +78,7 @@ export function DayColumn({
 		: variant === 'calendar'
 			? 'calendar-box'
 			: 'chip';
-	const isEmpty = loose.length === 0 && outfits.length === 0;
+	const isEmpty = entries.length === 0;
 	const today = isToday(day);
 
 	const isCalendar = variant === 'calendar';
@@ -139,48 +147,63 @@ export function DayColumn({
 
 				<DayNoteField tripId={tripId} day={day} note={note} />
 
-				{/* Loose content fills the rest of the day card (which IS the drop zone),
-				    so the empty space below is droppable too. */}
-				<div className="flex flex-1 flex-col gap-1.5">
-					{outfits.map(({ outfit, pieces }) => {
-						const zone: Zone = { kind: 'outfit', ownerId: outfit.id };
-						return (
-							<OutfitGroup
-								key={outfit.id}
-								outfit={outfit}
-								zone={zone}
-								count={pieces.length}
-								grid={gridPieces}
-							>
-								{pieces.map((s, i) =>
-									renderPiece(s.rep, i, zone, pieceSize, s.count),
-								)}
-							</OutfitGroup>
-						);
-					})}
-
-					{/* Loose pieces flow in a fill grid (image-forward) or a stack (compact).
-				    The empty placeholder renders as ONE cell INSIDE this grid so it stays
-				    tile-sized in every mode (it ballooned to a full-width square before),
-				    and the day's height barely shifts when the first piece lands. */}
-					{(isEmpty || loose.length > 0) && (
-						<div
-							className={cn(
-								gridPieces
-									? large
-										? 'grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-2'
-										: 'grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-1.5'
-									: 'flex flex-col gap-1',
-							)}
-						>
-							{isEmpty ? (
-								<EmptyTile size={pieceSize} />
-							) : (
-								loose.map((s, i) =>
-									renderPiece(s.rep, i, looseZone, pieceSize, s.count),
-								)
-							)}
-						</div>
+				{/* The day is ONE interleaved list (the day drop zone): loose pieces flow
+				    as image-forward/compact tiles and outfit groups span the full width,
+				    each positioned by its shared rank so outfits aren't pinned to the top.
+				    Pieces are Sortables; outfits are Sortables whose body still accepts
+				    clothing drops into the grouping. */}
+				<div
+					className={cn(
+						'flex-1',
+						gridPieces
+							? large
+								? 'grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-2'
+								: 'grid grid-cols-[repeat(auto-fill,minmax(5rem,1fr))] gap-1.5'
+							: 'flex flex-col gap-1',
+					)}
+				>
+					{isEmpty ? (
+						<EmptyTile size={pieceSize} />
+					) : (
+						entries.map((entry, i) => {
+							if (entry.kind === 'outfit') {
+								const zone: Zone = { kind: 'outfit', ownerId: entry.outfit.id };
+								return (
+									<Sortable
+										key={entry.outfit.id}
+										id={entry.outfit.id}
+										index={i}
+										type="trip-outfit"
+										zone={looseZone}
+										accept={['trip-outfit']}
+									>
+										{({ ref, handleRef, isDragging }) => (
+											<OutfitGroup
+												outfit={entry.outfit}
+												zone={zone}
+												count={entry.pieces.length}
+												grid={gridPieces}
+												dragRef={ref}
+												handleRef={handleRef}
+												isDragging={isDragging}
+												className={gridPieces ? 'col-span-full' : undefined}
+											>
+												{entry.pieces.map((s, j) =>
+													renderPiece(s.rep, j, zone, pieceSize, s.count),
+												)}
+											</OutfitGroup>
+										)}
+									</Sortable>
+								);
+							}
+							return renderPiece(
+								entry.stack.rep,
+								i,
+								looseZone,
+								pieceSize,
+								entry.stack.count,
+							);
+						})
 					)}
 				</div>
 			</DropZone>
@@ -229,6 +252,8 @@ function AddOutfitButton({ tripId, day }: { tripId: string; day: Date }) {
 		<Button
 			size="xs"
 			variant="ghost"
+			data-testid="add-outfit"
+			aria-label="Add outfit"
 			loading={createOutfit.isPending}
 			onClick={() => {
 				void createOutfit.mutateAsync({ day });

@@ -38,7 +38,9 @@ export const getClosetClothing = cache(async () => {
 	return prisma.clothing.findMany({
 		where: { userId: user.id },
 		include: { type: true },
-		orderBy: [{ typeName: 'asc' }, { brandName: 'asc' }, { color: 'asc' }],
+		// Honor the user's manual wardrobe order (lexorank) so the trip closet panel
+		// matches the order set by drag-to-reorder in the wardrobe.
+		orderBy: [{ order: 'asc' }],
 	});
 });
 

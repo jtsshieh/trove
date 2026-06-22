@@ -2,11 +2,18 @@
 
 import { TShirt } from '@phosphor-icons/react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Backpack, Inbox, Package, Trash2 } from 'lucide-react';
+import {
+	Backpack,
+	GripVertical,
+	Inbox,
+	Luggage,
+	Package,
+	Trash2,
+} from 'lucide-react';
 import * as React from 'react';
 import { toast } from 'sonner';
 
-import { DragAnnouncer, DragBoard, DropZone } from '@/components/dnd';
+import { DragAnnouncer, DragBoard, DropZone, Sortable } from '@/components/dnd';
 import { Button } from '@/components/ui/button';
 import {
 	Dialog,
@@ -29,11 +36,14 @@ import { cn } from '@/lib/utils';
 
 import {
 	changeClothingProvisionContainerOrder,
+	changeContainerProvisionTripOrder,
 	changeEssentialProvisionContainerOrder,
 	deleteClothingProvisionFromContainer,
 	deleteEssentialProvisionFromContainer,
 	moveClothingProvisionToContainer,
 	moveEssentialProvisionToContainer,
+	setClothingProvisionContainerless,
+	setEssentialProvisionContainerless,
 } from './_data/api';
 import { useDeleteContainerProvision } from './_data/mutations';
 import { containerBoardKeys } from './_data/queries';
@@ -47,14 +57,32 @@ interface FlatItem extends BoardItem {
 	type: ItemKind;
 	/** The clothing id (for pool dedupe); null for essentials. */
 	clothingId: string | null;
-	/** Owning containerProvision id, or null while in the Unassigned pool. */
+	/** Owning containerProvision id, or null while loose (pool / containerless). */
 	containerProvisionId: string | null;
 	containerOrder: string | null;
+	/** A loose item marked to be packed directly into a suitcase (no container). */
+	containerless: boolean;
 }
 
-const POOL = '__pool__';
-const POOL_ZONE: Zone = { kind: 'closet', ownerId: POOL };
+/** A container card, reorderable within the trip's containers board. */
+interface CardItem {
+	id: string;
+	type: 'container';
+	tripOrder: string | null;
+}
+
+type BoardEntry = FlatItem | CardItem;
+
+const POOL_ZONE: Zone = { kind: 'closet', ownerId: '__pool__' };
 const POOL_KEY = encodeZone(POOL_ZONE);
+const containerlessZone = (tripId: string): Zone => ({
+	kind: 'containerless',
+	ownerId: tripId,
+});
+const cardsZone = (tripId: string): Zone => ({
+	kind: 'containerCards',
+	ownerId: tripId,
+});
 const containerZone = (containerProvisionId: string): Zone => ({
 	kind: 'container',
 	ownerId: containerProvisionId,
@@ -75,6 +103,7 @@ function flatten(board: ContainersBoard): FlatItem[] {
 			imageKey: p.clothing.imageKey,
 			containerProvisionId,
 			containerOrder: p.containerOrder,
+			containerless: p.containerless,
 		});
 
 	const pushEssential = (
@@ -89,6 +118,7 @@ function flatten(board: ContainersBoard): FlatItem[] {
 			imageKey: p.essential.imageKey,
 			containerProvisionId,
 			containerOrder: p.containerOrder,
+			containerless: p.containerless,
 		});
 
 	for (const p of board.clothingProvisions) pushClothing(p, null);
@@ -102,77 +132,113 @@ function flatten(board: ContainersBoard): FlatItem[] {
 }
 
 /**
- * Collapse the unassigned pool to one representative per distinct clothing (a piece
- * reused across days is one owned unit to pack), capped so pool + already-packed
- * units never exceed the trip's bringing. Returns the representative items (the
- * controlled pool group) plus the ×count to badge each one with.
+ * Collapse identical clothing into one representative + a ×count, preserving order.
+ * Essentials are never reused — one rep each, count 1. Matches the pool's stacking so
+ * a clothing item reads the same ×N inside a container as in the Unassigned pool.
  */
-function splitPool(board: ContainersBoard): {
+function stack(items: FlatItem[]): {
 	reps: FlatItem[];
 	countById: Map<string, number>;
 } {
-	const flat = flatten(board);
-	const poolItems = flat.filter((it) => !it.containerProvisionId);
-
-	const bringMap = new Map<string, number>();
-	const ownedById = new Map<string, number>();
-	for (const p of board.clothingProvisions)
-		ownedById.set(p.clothingId, p.clothing.quantity);
-	for (const cp of board.containerProvisions)
-		for (const p of cp.clothingProvisions)
-			ownedById.set(p.clothingId, p.clothing.quantity);
-	for (const [clothingId, owned] of ownedById) bringMap.set(clothingId, owned);
-	for (const b of board.clothingBrings) bringMap.set(b.clothingId, b.bringing);
-
-	const packedByClothing = new Map<string, number>();
-	for (const it of flat)
-		if (it.containerProvisionId && it.clothingId)
-			packedByClothing.set(
-				it.clothingId,
-				(packedByClothing.get(it.clothingId) ?? 0) + 1,
-			);
-
 	const reps: FlatItem[] = [];
 	const countById = new Map<string, number>();
-	const clothingGroups = new Map<string, FlatItem[]>();
-
-	for (const item of poolItems) {
-		if (item.type === 'clothing' && item.clothingId) {
-			const list = clothingGroups.get(item.clothingId) ?? [];
-			list.push(item);
-			clothingGroups.set(item.clothingId, list);
-			continue;
+	const repByClothing = new Map<string, FlatItem>();
+	for (const it of items) {
+		if (it.type === 'clothing' && it.clothingId) {
+			const rep = repByClothing.get(it.clothingId);
+			if (rep) countById.set(rep.id, (countById.get(rep.id) ?? 1) + 1);
+			else {
+				repByClothing.set(it.clothingId, it);
+				reps.push(it);
+				countById.set(it.id, 1);
+			}
+		} else {
+			reps.push(it);
+			countById.set(it.id, 1);
 		}
-		// Essentials are never reused — one rep each, count 1.
-		reps.push(item);
-		countById.set(item.id, 1);
 	}
-
-	for (const [clothingId, group] of clothingGroups) {
-		const bringing = bringMap.get(clothingId) ?? group.length;
-		const packed = packedByClothing.get(clothingId) ?? 0;
-		const count = Math.min(group.length, Math.max(0, bringing - packed));
-		if (count === 0) continue;
-		reps.push(group[0]);
-		countById.set(group[0].id, count);
-	}
-
 	return { reps, countById };
 }
 
-/** Build the controlled groups: the deduped pool + one group per container. */
-function buildGroups(board: ContainersBoard): Record<string, FlatItem[]> {
+/** Per-clothing effective bringing for the trip (override else owned quantity). */
+function bringingMap(board: ContainersBoard): Map<string, number> {
+	const map = new Map<string, number>();
+	for (const p of board.clothingProvisions)
+		map.set(p.clothingId, p.clothing.quantity);
+	for (const cp of board.containerProvisions)
+		for (const p of cp.clothingProvisions)
+			map.set(p.clothingId, p.clothing.quantity);
+	for (const b of board.clothingBrings) map.set(b.clothingId, b.bringing);
+	return map;
+}
+
+/** Build every controlled group: pool, containerless, each container, and the cards. */
+function buildBoard(
+	board: ContainersBoard,
+	tripId: string,
+): { groups: Record<string, BoardEntry[]>; countById: Map<string, number> } {
 	const flat = flatten(board);
-	const groups: Record<string, FlatItem[]> = {
-		[POOL_KEY]: splitPool(board).reps,
-	};
+	const loose = flat.filter((it) => !it.containerProvisionId);
+	const countById = new Map<string, number>();
+	const groups: Record<string, BoardEntry[]> = {};
+
+	// Pool: loose items NOT marked containerless. Clothing capped so pool + everything
+	// already assigned (containers + containerless) never exceeds the bring count.
+	const bring = bringingMap(board);
+	const consumed = new Map<string, number>();
+	for (const it of flat)
+		if (
+			it.type === 'clothing' &&
+			it.clothingId &&
+			(it.containerProvisionId || it.containerless)
+		)
+			consumed.set(it.clothingId, (consumed.get(it.clothingId) ?? 0) + 1);
+
+	const poolItems = loose.filter((it) => !it.containerless);
+	const pool = stack(poolItems);
+	const poolReps: FlatItem[] = [];
+	for (const rep of pool.reps) {
+		if (rep.type === 'clothing' && rep.clothingId) {
+			const owned =
+				bring.get(rep.clothingId) ?? pool.countById.get(rep.id) ?? 1;
+			const cap = Math.max(0, owned - (consumed.get(rep.clothingId) ?? 0));
+			const count = Math.min(pool.countById.get(rep.id) ?? 1, cap);
+			if (count === 0) continue;
+			poolReps.push(rep);
+			countById.set(rep.id, count);
+		} else {
+			poolReps.push(rep);
+			countById.set(rep.id, 1);
+		}
+	}
+	groups[POOL_KEY] = poolReps;
+
+	// Containerless: loose items marked direct-to-luggage (stacked, no cap).
+	const cl = stack(loose.filter((it) => it.containerless));
+	groups[encodeZone(containerlessZone(tripId))] = cl.reps;
+	for (const [id, n] of cl.countById) countById.set(id, n);
+
+	// Each container: its items, ordered by containerOrder, then stacked.
 	for (const cp of board.containerProvisions) {
-		groups[encodeZone(containerZone(cp.id))] = sortByRank(
+		const inside = sortByRank(
 			flat.filter((it) => it.containerProvisionId === cp.id),
 			(it) => it.containerOrder ?? '',
 		);
+		const s = stack(inside);
+		groups[encodeZone(containerZone(cp.id))] = s.reps;
+		for (const [id, n] of s.countById) countById.set(id, n);
 	}
-	return groups;
+
+	// The reorderable container cards themselves.
+	groups[encodeZone(cardsZone(tripId))] = board.containerProvisions.map(
+		(cp) => ({
+			id: cp.id,
+			type: 'container' as const,
+			tripOrder: cp.tripOrder,
+		}),
+	);
+
+	return { groups, countById };
 }
 
 export function ContainerBoard({
@@ -209,15 +275,30 @@ export function ContainerBoard({
 	);
 
 	const onSortableDrop = React.useCallback(
-		(drop: SortableDrop<FlatItem>) => {
+		(drop: SortableDrop<BoardEntry>) => {
 			const { id, type, fromZone, toZone, destItems, index, sameZone } = drop;
+
+			// Reordering a container card within the trip.
+			if (type === 'container') {
+				if (!sameZone) return;
+				const rank = rankForNeighbors(
+					destItems as CardItem[],
+					index,
+					(c) => c.tripOrder ?? '',
+				);
+				void persist(
+					() => changeContainerProvisionTripOrder(id, rank),
+					'Reordered',
+					'Could not reorder container',
+				);
+				return;
+			}
+
 			const kind = type as ItemKind;
 
-			// Dropped into the Unassigned pool.
+			// Dropped into the Unassigned pool → fully unassign.
 			if (toZone.kind === 'closet') {
-				// Pool reorder isn't persisted (the pool is a deduped view).
-				if (fromZone.kind === 'closet') return;
-				// From a container → unpack back to the pool.
+				if (fromZone.kind === 'closet') return; // pool reorder isn't persisted
 				void persist(
 					() =>
 						(kind === 'clothing'
@@ -229,10 +310,24 @@ export function ContainerBoard({
 				return;
 			}
 
-			// Dropped into a container.
+			// Dropped into the Containerless card → mark direct-to-luggage.
+			if (toZone.kind === 'containerless') {
+				if (fromZone.kind === 'containerless') return; // within-card order not kept
+				void persist(
+					() =>
+						(kind === 'clothing'
+							? setClothingProvisionContainerless
+							: setEssentialProvisionContainerless)(id),
+					'Moved to direct-to-luggage',
+					'Could not move item',
+				);
+				return;
+			}
+
+			// Dropped into a real container.
 			const containerProvisionId = toZone.ownerId;
 			const rank = rankForNeighbors(
-				destItems,
+				destItems as FlatItem[],
 				index,
 				(it) => it.containerOrder ?? '',
 			);
@@ -262,36 +357,44 @@ export function ContainerBoard({
 		[persist],
 	);
 
-	const { groups, write, props } = useDragBoard<FlatItem>({
-		groups: () => buildGroups(board),
+	const { groups, write, props } = useDragBoard<BoardEntry>({
+		groups: () => buildBoard(board, tripId).groups,
 		deps: [board],
 		onSortableDrop,
 	});
 
-	const countById = React.useMemo(() => splitPool(board).countById, [board]);
+	const countById = React.useMemo(
+		() => buildBoard(board, tripId).countById,
+		[board, tripId],
+	);
 
 	const containers = board.containerProvisions;
-	const poolReps = groups[POOL_KEY] ?? [];
+	const poolReps = (groups[POOL_KEY] ?? []) as FlatItem[];
+	const containerlessReps = (groups[encodeZone(containerlessZone(tripId))] ??
+		[]) as FlatItem[];
+	const cards = (groups[encodeZone(cardsZone(tripId))] ?? []) as CardItem[];
 
-	// Progress (in provisions) from server truth — the bar settles on the refetch.
+	// Progress in DISTINCT packable units (the ×N stacks the board shows), from server
+	// truth so the bar settles on the refetch. An item is "placed" once it's in a
+	// container OR marked direct-to-luggage (containerless); the pool is what's left.
 	const { total, packed } = React.useMemo(() => {
-		const inContainers = board.containerProvisions.reduce(
-			(n, cp) =>
-				n + cp.clothingProvisions.length + cp.essentialProvisions.length,
-			0,
-		);
-		const loose =
-			board.clothingProvisions.length + board.essentialProvisions.length;
-		return { total: inContainers + loose, packed: inContainers };
-	}, [board]);
+		const { groups: g, countById: c } = buildBoard(board, tripId);
+		const sum = (reps?: BoardEntry[]) =>
+			(reps ?? []).reduce((n, r) => n + (c.get(r.id) ?? 1), 0);
+		const poolUnits = sum(g[POOL_KEY]);
+		const containerlessUnits = sum(g[encodeZone(containerlessZone(tripId))]);
+		let containerUnits = 0;
+		for (const cp of board.containerProvisions)
+			containerUnits += sum(g[encodeZone(containerZone(cp.id))]);
+		const placed = containerUnits + containerlessUnits;
+		return { total: placed + poolUnits, packed: placed };
+	}, [board, tripId]);
 
-	/** Pull a packed item back out of its container, into the Unassigned pool. */
+	/** Pull a packed/containerless item back out, into the Unassigned pool. */
 	const unpack = React.useCallback(
 		(item: FlatItem) => {
-			// Optimistically remove from whatever container holds it; the refetch puts
-			// it back in the pool.
 			write((g) => {
-				const next: Record<string, FlatItem[]> = {};
+				const next: Record<string, BoardEntry[]> = {};
 				for (const [k, arr] of Object.entries(g))
 					next[k] = arr.filter((it) => it.id !== item.id);
 				return next;
@@ -308,17 +411,31 @@ export function ContainerBoard({
 		[write, persist],
 	);
 
+	// Map cards (in their persisted order) back to the full provision for rendering.
+	const cpById = React.useMemo(
+		() => new Map(containers.map((cp) => [cp.id, cp])),
+		[containers],
+	);
+
 	return (
 		<DragBoard {...props}>
 			<DragAnnouncer />
 			<div className="grid grid-cols-1 gap-4 lg:grid-cols-[20rem_1fr] lg:items-start">
-				<UnassignedPool reps={poolReps} countById={countById} />
+				<div className="flex flex-col gap-4 lg:sticky lg:top-24">
+					<UnassignedPool reps={poolReps} countById={countById} />
+					<ContainerlessCard
+						tripId={tripId}
+						reps={containerlessReps}
+						countById={countById}
+						onUnpack={unpack}
+					/>
+				</div>
 				<div className="flex flex-col gap-3">
 					<div className="flex items-center justify-between gap-3 px-0.5">
 						<p className="text-sm font-medium">
 							Containers
 							<span className="text-muted-foreground ml-2 tabular-nums">
-								{packed}/{total} packed
+								{packed}/{total} placed
 							</span>
 						</p>
 						<div className="w-40">
@@ -332,24 +449,88 @@ export function ContainerBoard({
 							description="Add a bag or packing cube to start sorting your provisions into it."
 						/>
 					) : (
-						<div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-							{containers.map((cp) => (
-								<ContainerCard
-									key={cp.id}
-									tripId={tripId}
-									name={cp.container.name}
-									imageKey={cp.container.imageKey}
-									type={cp.container.type}
-									containerProvisionId={cp.id}
-									items={groups[encodeZone(containerZone(cp.id))] ?? []}
-									onUnpack={unpack}
-								/>
-							))}
-						</div>
+						<DropZone
+							zone={cardsZone(tripId)}
+							accepts={['container']}
+							className="grid grid-cols-1 gap-4 xl:grid-cols-2"
+						>
+							{cards.map((card, i) => {
+								const cp = cpById.get(card.id);
+								if (!cp) return null;
+								return (
+									<Sortable
+										key={card.id}
+										id={card.id}
+										index={i}
+										type="container"
+										zone={cardsZone(tripId)}
+										accept={['container']}
+									>
+										{({ ref, handleRef, isDragging }) => (
+											<ContainerCard
+												dragRef={ref}
+												handleRef={handleRef}
+												isDragging={isDragging}
+												tripId={tripId}
+												name={cp.container.name}
+												imageKey={cp.container.imageKey}
+												type={cp.container.type}
+												containerProvisionId={cp.id}
+												items={
+													(groups[encodeZone(containerZone(cp.id))] ??
+														[]) as FlatItem[]
+												}
+												countById={countById}
+												onUnpack={unpack}
+											/>
+										)}
+									</Sortable>
+								);
+							})}
+						</DropZone>
 					)}
 				</div>
 			</div>
 		</DragBoard>
+	);
+}
+
+/** A single packable tile with an optional ×N stack badge (shared by every zone). */
+function StackedTile({
+	item,
+	index,
+	zone,
+	count,
+	onRemove,
+	tileTestId = 'provision-tile',
+	countTestId = 'stack-count',
+}: {
+	item: FlatItem;
+	index: number;
+	zone: Zone;
+	count: number;
+	onRemove?: () => void;
+	tileTestId?: string;
+	countTestId?: string;
+}) {
+	return (
+		<div className="relative" data-testid={tileTestId} data-name={item.name}>
+			<ProvisionTile
+				item={item}
+				index={index}
+				zone={zone}
+				onRemove={onRemove}
+			/>
+			{count > 1 && (
+				<span
+					data-testid={countTestId}
+					className="bg-brand text-brand-foreground pointer-events-none absolute top-1 right-1 z-10 rounded-full px-1.5 py-0.5 text-[0.65rem] font-semibold tabular-nums shadow-sm"
+					title={`${count} units`}
+				>
+					×{count}
+				</span>
+			)}
+		</div>
 	);
 }
 
@@ -361,7 +542,7 @@ function UnassignedPool({
 	countById: Map<string, number>;
 }) {
 	return (
-		<aside className="lg:sticky lg:top-24" data-testid="pool">
+		<aside data-testid="pool">
 			<div className="bg-panel text-panel-foreground ring-foreground/5 flex flex-col gap-3 rounded-xl p-3 ring-1">
 				<div className="flex items-center justify-between px-1">
 					<h2 className="text-sm font-semibold">Unassigned</h2>
@@ -385,28 +566,17 @@ function UnassignedPool({
 							className="border-none bg-transparent py-8"
 						/>
 					) : (
-						reps.map((rep, i) => {
-							const count = countById.get(rep.id) ?? 1;
-							return (
-								<div
-									key={rep.id}
-									className="relative"
-									data-testid="pool-tile"
-									data-name={rep.name}
-								>
-									<ProvisionTile item={rep} index={i} zone={POOL_ZONE} />
-									{count > 1 && (
-										<span
-											data-testid="pool-count"
-											className="bg-brand text-brand-foreground pointer-events-none absolute top-1 right-1 z-10 rounded-full px-1.5 py-0.5 text-[0.65rem] font-semibold tabular-nums shadow-sm"
-											title={`${count} units unassigned`}
-										>
-											×{count}
-										</span>
-									)}
-								</div>
-							);
-						})
+						reps.map((rep, i) => (
+							<StackedTile
+								key={rep.id}
+								item={rep}
+								index={i}
+								zone={POOL_ZONE}
+								count={countById.get(rep.id) ?? 1}
+								tileTestId="pool-tile"
+								countTestId="pool-count"
+							/>
+						))
 					)}
 				</DropZone>
 			</div>
@@ -414,82 +584,167 @@ function UnassignedPool({
 	);
 }
 
+/** A non-real "container" — items dropped here are packed straight into a suitcase. */
+function ContainerlessCard({
+	tripId,
+	reps,
+	countById,
+	onUnpack,
+}: {
+	tripId: string;
+	reps: FlatItem[];
+	countById: Map<string, number>;
+	onUnpack: (item: FlatItem) => void;
+}) {
+	const zone = containerlessZone(tripId);
+	return (
+		<div data-testid="containerless-card">
+			<DropZone
+				zone={zone}
+				accepts={['clothing', 'essential']}
+				className={cn(
+					'bg-card ring-foreground/10 flex flex-col gap-2 rounded-xl p-3 ring-1 transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)]',
+					'data-[drop-target]:bg-brand-subtle',
+				)}
+			>
+				<div className="flex items-center gap-2.5">
+					<span className="bg-muted text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg">
+						<Luggage className="size-1/2 opacity-60" />
+					</span>
+					<div className="min-w-0 flex-1">
+						<p className="text-sm font-medium">Pack directly into luggage</p>
+						<p className="text-muted-foreground text-xs">
+							No container · {reps.length} item{reps.length === 1 ? '' : 's'}
+						</p>
+					</div>
+				</div>
+				<div className="flex min-h-12 flex-col gap-1.5">
+					{reps.length === 0 ? (
+						<EmptyState
+							icon={<Luggage />}
+							title="Drag items here"
+							description="They’ll be packed straight into a suitcase, no container needed."
+							className="flex-1 border-none bg-transparent py-4"
+						/>
+					) : (
+						reps.map((rep, i) => (
+							<StackedTile
+								key={rep.id}
+								item={rep}
+								index={i}
+								zone={zone}
+								count={countById.get(rep.id) ?? 1}
+								onRemove={() => onUnpack(rep)}
+							/>
+						))
+					)}
+				</div>
+			</DropZone>
+		</div>
+	);
+}
+
 function ContainerCard({
+	dragRef,
+	handleRef,
+	isDragging,
 	tripId,
 	name,
 	imageKey,
 	type,
 	containerProvisionId,
 	items,
+	countById,
 	onUnpack,
 }: {
+	dragRef: (node: HTMLElement | null) => void;
+	handleRef: (node: Element | null) => void;
+	isDragging: boolean;
 	tripId: string;
 	name: string;
 	imageKey: string | null;
 	type: ContainerType;
 	containerProvisionId: string;
 	items: FlatItem[];
+	countById: Map<string, number>;
 	onUnpack: (item: FlatItem) => void;
 }) {
 	const isClothes = type === ContainerType.Clothes;
 	const accept: ItemKind = isClothes ? 'clothing' : 'essential';
 	const zone = containerZone(containerProvisionId);
 
-	// The WHOLE card is the drop zone (header + items), so a provision can be dropped
-	// anywhere on a container, not just the thin items strip.
+	// The whole card is draggable (it's the Sortable element) so dragging the grip /
+	// header reorders it among the trip's containers. The item DropZone wraps ONLY the
+	// items area — keeping it off the header so a card dropped on another card's header
+	// resolves to the card sortable (reorder), not the item drop zone.
 	return (
-		<div data-testid="container-card" data-name={name}>
+		<div
+			ref={dragRef}
+			data-testid="container-card"
+			data-name={name}
+			className={cn(
+				'bg-card ring-foreground/10 flex h-full flex-col gap-3 rounded-xl p-3 ring-1',
+				isDragging && 'opacity-50',
+			)}
+		>
+			<div className="flex items-center gap-2">
+				<span
+					ref={handleRef}
+					data-testid="container-grip"
+					aria-label={`Reorder ${name}`}
+					className="text-muted-foreground/60 hover-hover:hover:text-muted-foreground -ml-0.5 flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded-md"
+				>
+					<GripVertical className="size-4" />
+				</span>
+				<ItemDisplay
+					name={name}
+					imageKey={imageKey}
+					size="chip"
+					fallbackIcon={<Package className="size-1/2 opacity-40" />}
+					className="min-w-0 flex-1 [&_span:first-child]:font-medium"
+					meta={
+						<span className="inline-flex items-center gap-1">
+							{isClothes ? (
+								<TShirt className="size-3" />
+							) : (
+								<Backpack className="size-3" />
+							)}
+							{type} · {items.length} item{items.length === 1 ? '' : 's'}
+						</span>
+					}
+				/>
+				<RemoveContainerButton
+					tripId={tripId}
+					containerProvisionId={containerProvisionId}
+					name={name}
+				/>
+			</div>
 			<DropZone
 				zone={zone}
 				accepts={[accept]}
 				className={cn(
-					'bg-card ring-foreground/10 flex h-full flex-col gap-3 rounded-xl p-3 ring-1 transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)]',
+					'flex min-h-20 flex-1 flex-col gap-1.5 rounded-lg transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)]',
 					'data-[drop-target]:bg-brand-subtle',
 				)}
 			>
-				<div className="flex items-center gap-2.5">
-					<ItemDisplay
-						name={name}
-						imageKey={imageKey}
-						size="chip"
-						fallbackIcon={<Package className="size-1/2 opacity-40" />}
-						className="min-w-0 flex-1 [&_span:first-child]:font-medium"
-						meta={
-							<span className="inline-flex items-center gap-1">
-								{isClothes ? (
-									<TShirt className="size-3" />
-								) : (
-									<Backpack className="size-3" />
-								)}
-								{type} · {items.length} item{items.length === 1 ? '' : 's'}
-							</span>
-						}
+				{items.length === 0 ? (
+					<EmptyState
+						icon={isClothes ? <TShirt /> : <Backpack />}
+						title={`Drag ${isClothes ? 'clothing' : 'essentials'} here`}
+						className="flex-1 border-none bg-transparent py-6"
 					/>
-					<RemoveContainerButton
-						tripId={tripId}
-						containerProvisionId={containerProvisionId}
-						name={name}
-					/>
-				</div>
-				<div className="flex min-h-20 flex-1 flex-col gap-1.5">
-					{items.length === 0 ? (
-						<EmptyState
-							icon={isClothes ? <TShirt /> : <Backpack />}
-							title={`Drag ${isClothes ? 'clothing' : 'essentials'} here`}
-							className="flex-1 border-none bg-transparent py-6"
+				) : (
+					items.map((it, i) => (
+						<StackedTile
+							key={it.id}
+							item={it}
+							index={i}
+							zone={zone}
+							count={countById.get(it.id) ?? 1}
+							onRemove={() => onUnpack(it)}
 						/>
-					) : (
-						items.map((it, i) => (
-							<ProvisionTile
-								key={it.id}
-								item={it}
-								index={i}
-								zone={zone}
-								onRemove={() => onUnpack(it)}
-							/>
-						))
-					)}
-				</div>
+					))
+				)}
 			</DropZone>
 		</div>
 	);
@@ -526,6 +781,7 @@ function RemoveContainerButton({
 						size="icon-sm"
 						className="text-muted-foreground hover-hover:hover:text-destructive shrink-0"
 						aria-label={`Remove ${name}`}
+						onPointerDown={(e) => e.stopPropagation()}
 					/>
 				}
 			>

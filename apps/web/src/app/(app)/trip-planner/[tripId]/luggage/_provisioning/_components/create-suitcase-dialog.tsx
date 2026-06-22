@@ -1,7 +1,7 @@
 'use client';
 
 import type { Luggage } from '@/generated/prisma/client';
-import { ChevronsUpDown, Plus } from 'lucide-react';
+import { ChevronsUpDown, Minus, Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -42,19 +42,25 @@ import { cn } from '@/lib/utils';
 import { useCreateLuggageProvision } from '../_data/mutations';
 import { createLuggageProvisionSchema } from '../_data/schemas';
 
+/** A catalog suitcase with how many units are still free to add to this trip. */
+type AvailableLuggage = Luggage & { remaining: number };
+
 /**
  * Adds a suitcase from the user's wardrobe to this trip. `luggage` is already
- * filtered to suitcases not yet provisioned, so an empty list means "all added".
+ * filtered to suitcases the user still has free units of, so an empty list means
+ * "all added". For a multi-owned suitcase you can pick how many to add, each
+ * becoming its own card.
  */
 export function CreateSuitcaseDialog({
 	tripId,
 	luggage,
 }: {
 	tripId: string;
-	luggage: Luggage[];
+	luggage: AvailableLuggage[];
 }) {
 	const [open, setOpen] = useState(false);
 	const [comboOpen, setComboOpen] = useState(false);
+	const [count, setCount] = useState(1);
 	const createProvision = useCreateLuggageProvision(tripId);
 	const isPending = createProvision.isPending;
 
@@ -65,8 +71,9 @@ export function CreateSuitcaseDialog({
 
 	const onSubmit = form.handleSubmit(async (data) => {
 		try {
-			await createProvision.mutateAsync(data);
+			await createProvision.mutateAsync({ ...data, count });
 			form.reset();
+			setCount(1);
 			setOpen(false);
 		} catch {
 			// The mutation hook surfaces the error toast.
@@ -74,12 +81,18 @@ export function CreateSuitcaseDialog({
 	});
 
 	const selected = luggage.find((l) => l.id === form.watch('luggageId'));
+	const remaining = selected?.remaining ?? 1;
+	const stepCount = (delta: number) =>
+		setCount((c) => Math.max(1, Math.min(remaining, c + delta)));
 
 	return (
 		<Dialog
 			open={open}
 			onOpenChange={(next) => {
-				if (!next) form.reset();
+				if (!next) {
+					form.reset();
+					setCount(1);
+				}
 				setOpen(next);
 			}}
 		>
@@ -143,6 +156,7 @@ export function CreateSuitcaseDialog({
 																key={lug.id}
 																onSelect={() => {
 																	form.setValue('luggageId', lug.id);
+																	setCount(1);
 																	setComboOpen(false);
 																}}
 															>
@@ -161,9 +175,49 @@ export function CreateSuitcaseDialog({
 								</FormItem>
 							)}
 						/>
+						{selected && remaining > 1 && (
+							<div
+								className="flex items-center gap-2 text-sm"
+								data-testid="suitcase-qty"
+								data-name={selected.name}
+							>
+								<span className="min-w-0 flex-1 truncate">How many?</span>
+								<span className="text-muted-foreground text-xs">
+									{remaining} owned free
+								</span>
+								<div className="flex items-center gap-1">
+									<Button
+										type="button"
+										size="icon-xs"
+										variant="ghost"
+										aria-label="Add one fewer"
+										disabled={count <= 1}
+										onClick={() => stepCount(-1)}
+									>
+										<Minus />
+									</Button>
+									<span
+										data-testid="suitcase-qty-value"
+										className="w-6 text-center text-sm font-semibold tabular-nums"
+									>
+										{count}
+									</span>
+									<Button
+										type="button"
+										size="icon-xs"
+										variant="ghost"
+										aria-label="Add one more"
+										disabled={count >= remaining}
+										onClick={() => stepCount(1)}
+									>
+										<Plus />
+									</Button>
+								</div>
+							</div>
+						)}
 						<DialogFooter>
 							<Button type="submit" variant="brand" loading={isPending}>
-								Add suitcase
+								Add{count > 1 ? ` ${count} suitcases` : ' suitcase'}
 							</Button>
 						</DialogFooter>
 					</form>

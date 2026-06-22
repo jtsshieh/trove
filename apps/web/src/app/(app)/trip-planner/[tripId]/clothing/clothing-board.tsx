@@ -1,22 +1,7 @@
 'use client';
 
-import {
-	CalendarDays,
-	LayoutGrid,
-	List as ListIcon,
-	Rows3,
-	Shirt,
-} from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
-import {
-	startTransition,
-	useCallback,
-	useEffect,
-	useMemo,
-	useState,
-	type ReactNode,
-} from 'react';
+import { useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import {
 	addDays,
 	eachDayOfInterval,
@@ -28,12 +13,7 @@ import {
 import { toast } from 'sonner';
 
 import { DragAnnouncer, DragBoard } from '@/components/dnd';
-import { DisplayToggle } from '@/components/display-mode';
-import { Button } from '@/components/ui/button';
 import { type ItemDisplaySize } from '@/components/ui/item-display';
-import { Segmented } from '@/components/segmented';
-import { updateUserSettings } from '@/app/(app)/account/_data/api';
-import { TripPageHeader } from '@/app/(app)/trip-planner/[tripId]/_components/trip-page-header';
 import {
 	PieceSize,
 	ProvisionSection,
@@ -48,19 +28,18 @@ import {
 } from '@/lib/dnd/use-drag-board';
 import { encodeZone, type Zone } from '@/lib/dnd/zone';
 import {
-	distinctUnits,
 	effectiveBringing,
 	reuseCount as computeReuseCount,
 	reuseCounts,
 	whereUsed,
 	type BringMap,
-	type PlacementLike,
 } from '@/lib/reuse';
 import { cn } from '@/lib/utils';
 
 import {
 	assignOutfitToDays,
 	changeClothingProvisionDayOrder,
+	changeTripOutfitOrder,
 	createClothingProvisions,
 	moveClothingProvision,
 	moveTripOutfitToDay,
@@ -68,10 +47,12 @@ import {
 import { clothingBoardKeys } from './_data/queries';
 import type { TripClothingBoard } from './_data/fetchers';
 import type { OutfitWithItems } from '@/app/(app)/outfits/_data/fetchers';
+import { useClothingBoardControls } from './board-controls';
 import { ClosetSidebar } from './_components/closet-panel';
 import {
 	DayColumn,
 	type DayBucket,
+	type DayEntry,
 	type PieceStack,
 } from './_components/day-column';
 import { SectionLane } from './_components/section-lane';
@@ -80,7 +61,24 @@ import type { BoardOutfit, BoardProvision } from './_components/types';
 
 type ClosetClothing = Clothing & { type: { name: string; category: string } };
 
-const CLOSET_PREF = 'pkl:clothing-closet';
+/**
+ * The board's controlled groups hold two kinds of sortable: clothing provisions and
+ * outfit groupings (TripOutfit). On a day they live in ONE interleaved list — an
+ * outfit can sit between loose pieces — sorted by a shared lexorank (a piece's
+ * dayOrder, an outfit's order). They're discriminated at drop time by the dnd item
+ * `type` ('clothing' vs 'trip-outfit').
+ */
+type BoardEntry = BoardProvision | BoardOutfit;
+
+/** A day entry is an outfit grouping (vs a clothing piece) when it has no clothingId. */
+function isDayOutfit(entry: BoardEntry): entry is BoardOutfit {
+	return !('clothingId' in entry);
+}
+
+/** The shared rank an entry sorts by within its day's single interleaved list. */
+function entryRank(entry: BoardEntry): string {
+	return isDayOutfit(entry) ? entry.order : entry.dayOrder;
+}
 
 // ——— zones ———
 const dayZone = (key: string): Zone => ({ kind: 'day', ownerId: key });
@@ -112,11 +110,11 @@ function buildBoard(
 	tripId: string,
 	days: Date[],
 ): {
-	groups: Record<string, BoardProvision[]>;
+	groups: Record<string, BoardEntry[]>;
 	countById: Map<string, number>;
 } {
 	const provisions = board.clothingProvisions;
-	const groups: Record<string, BoardProvision[]> = {};
+	const groups: Record<string, BoardEntry[]> = {};
 	const countById = new Map<string, number>();
 
 	const dedupe = (list: BoardProvision[], zone: Zone) => {
@@ -125,24 +123,39 @@ function buildBoard(
 		for (const s of stacks) countById.set(s.rep.id, s.count);
 	};
 
-	for (const day of days) {
-		const key = dayKey(day);
-		dedupe(
-			provisions.filter(
-				(p) =>
-					!p.tripOutfitId &&
-					p.section === ProvisionSection.Day &&
-					!!p.day &&
-					dayKey(p.day) === key,
-			),
-			dayZone(key),
-		);
-	}
+	// Each outfit's own pieces (deduped) live in its outfit zone.
 	for (const outfit of board.tripOutfits) {
 		dedupe(
 			provisions.filter((p) => p.tripOutfitId === outfit.id),
 			outfitZone(outfit.id),
 		);
+	}
+	// Each day is ONE interleaved list: its loose piece stacks PLUS its outfit
+	// groupings, sorted by the shared rank so an outfit can sit anywhere among pieces.
+	for (const day of days) {
+		const key = dayKey(day);
+		const stacks = stackPieces(
+			sortByRank(
+				provisions.filter(
+					(p) =>
+						!p.tripOutfitId &&
+						p.section === ProvisionSection.Day &&
+						!!p.day &&
+						dayKey(p.day) === key,
+				),
+				(p) => p.dayOrder,
+			),
+		);
+		for (const s of stacks) countById.set(s.rep.id, s.count);
+		const dayOutfits = board.tripOutfits.filter(
+			(o) => dayKey(o.day) === key,
+		);
+		const merged: BoardEntry[] = [
+			...stacks.map((s) => s.rep),
+			...dayOutfits,
+		];
+		merged.sort((a, b) => entryRank(a).localeCompare(entryRank(b)));
+		groups[encodeZone(dayZone(key))] = merged;
 	}
 	// Universal / Backup: every provision (no dedupe — the lanes show them flat).
 	groups[encodeZone(universalZone(tripId))] = sortByRank(
@@ -167,35 +180,25 @@ export function ClothingBoard({
 	board,
 	closet,
 	outfits,
-	initialView,
-	initialPieceSize,
 }: {
 	trip: Pick<Trip, 'id' | 'start' | 'end'>;
 	board: TripClothingBoard;
 	closet: ClosetClothing[];
 	outfits: OutfitWithItems[];
-	initialView: ProvisionView;
-	initialPieceSize: PieceSize;
 }) {
 	const queryClient = useQueryClient();
-	const router = useRouter();
-	const [view, setView] = useState<ProvisionView>(initialView);
-	const [pieceSize, setPieceSize] = useState<PieceSize>(initialPieceSize);
+	// list/calendar, piece size and the closet toggle are shared with the streamed
+	// header actions, so they live in a context that wraps both (see board-controls).
+	const { view, pieceSize, closetOpen, toggleCloset, restoreCloset } =
+		useClothingBoardControls();
 	const large = pieceSize === PieceSize.Large;
-	// The closet docks as a toggleable sidebar, closed by default so the board
-	// (especially the 7-column calendar) gets full width. We restore a previously
-	// opened preference after mount (initial render is closed on both server +
-	// client → no hydration mismatch).
-	const [closetOpen, setClosetOpen] = useState(false);
+
+	// Apply the saved closet open/closed preference AFTER this board (a Suspense
+	// child) hydrates, so it first hydrates closed — matching the server HTML — then
+	// opens. Doing it in the provider (outside Suspense) mismatched on hydration.
 	useEffect(() => {
-		if (localStorage.getItem(CLOSET_PREF) === 'open') setClosetOpen(true);
-	}, []);
-	function toggleCloset() {
-		setClosetOpen((open) => {
-			localStorage.setItem(CLOSET_PREF, open ? 'closed' : 'open');
-			return !open;
-		});
-	}
+		restoreCloset();
+	}, [restoreCloset]);
 
 	const invalidateBoard = useCallback(
 		() =>
@@ -285,14 +288,35 @@ export function ClothingBoard({
 	);
 
 	const onSortableDrop = useCallback(
-		(drop: SortableDrop<BoardProvision>) => {
+		(drop: SortableDrop<BoardEntry>) => {
+			// An outfit grouping reordered within / moved across days. Outfits live in
+			// the day's single interleaved list, so the rank is computed against its
+			// mixed neighbours (pieces + outfits) via the shared entryRank.
+			if (drop.type === 'trip-outfit') {
+				const rank = rankForNeighbors(drop.destItems, drop.index, entryRank);
+				if (drop.sameZone) {
+					void persist(
+						() => changeTripOutfitOrder(drop.id, rank),
+						'Reordered',
+						'Could not reorder outfit',
+					);
+					return;
+				}
+				const day = dayOf(drop.toZone);
+				if (!day) return;
+				void persist(
+					() => moveTripOutfitToDay(drop.id, { day, order: rank }),
+					'Moved outfit',
+					'Could not move outfit',
+				);
+				return;
+			}
+
+			// A clothing piece reordered within / moved between day/outfit/section zones.
+			// In a day its neighbours can be outfits too, so rank against entryRank.
 			const placement = zonePlacement(drop.toZone);
 			if (!placement) return;
-			const rank = rankForNeighbors(
-				drop.destItems,
-				drop.index,
-				(p) => p.dayOrder,
-			);
+			const rank = rankForNeighbors(drop.destItems, drop.index, entryRank);
 			if (drop.sameZone) {
 				void persist(
 					() => changeClothingProvisionDayOrder(drop.id, rank),
@@ -313,7 +337,7 @@ export function ClothingBoard({
 				);
 			}
 		},
-		[zonePlacement, persist],
+		[zonePlacement, dayOf, persist],
 	);
 
 	const onExternalDrop = useCallback(
@@ -328,20 +352,6 @@ export function ClothingBoard({
 					() => assignOutfitToDays(trip.id, { outfitId: drop.id, days: [day] }),
 					'Added outfit',
 					'Could not add outfit',
-				);
-				return;
-			}
-
-			// A whole TripOutfit grouping dragged onto another day moves it there.
-			if (drop.type === 'trip-outfit') {
-				const day = dayOf(drop.toZone);
-				if (!day) return;
-				const outfit = outfitById.get(drop.id);
-				if (!outfit || dayKey(outfit.day) === dayKey(day)) return;
-				void persist(
-					() => moveTripOutfitToDay(drop.id, { day }),
-					'Moved outfit',
-					'Could not move outfit',
 				);
 				return;
 			}
@@ -366,7 +376,7 @@ export function ClothingBoard({
 		[dayOf, outfitById, zonePlacement, persist, trip.id],
 	);
 
-	const { groups, write, props } = useDragBoard<BoardProvision>({
+	const { groups, write, props } = useDragBoard<BoardEntry>({
 		groups: () => buildBoard(board, trip.id, days).groups,
 		deps: [board],
 		onSortableDrop,
@@ -383,21 +393,6 @@ export function ClothingBoard({
 		() => reuseCounts(board.clothingProvisions),
 		[board.clothingProvisions],
 	);
-
-	// Distinct physical units each clothing consumes, honoring the day-reuse rule
-	// (one unit shared across days, but Universal/Backup each take their own).
-	const distinctById = useMemo(() => {
-		const byClothing = new Map<string, PlacementLike[]>();
-		for (const p of board.clothingProvisions) {
-			const list = byClothing.get(p.clothingId) ?? [];
-			list.push({ section: p.section, dayKey: p.day ? dayKey(p.day) : null });
-			byClothing.set(p.clothingId, list);
-		}
-		const map = new Map<string, number>();
-		for (const [clothingId, placements] of byClothing)
-			map.set(clothingId, distinctUnits(placements));
-		return map;
-	}, [board.clothingProvisions]);
 
 	const ownedById = useMemo(() => {
 		const map = new Map<string, number>();
@@ -450,7 +445,7 @@ export function ClothingBoard({
 	const handleRemovedPiece = useCallback(
 		(id: string) => {
 			write((g) => {
-				const next: Record<string, BoardProvision[]> = {};
+				const next: Record<string, BoardEntry[]> = {};
 				for (const [k, arr] of Object.entries(g))
 					next[k] = arr.filter((p) => p.id !== id);
 				return next;
@@ -482,100 +477,22 @@ export function ClothingBoard({
 			/>
 		),
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-		[
-			trip.id,
-			counts,
-			distinctById,
-			bringOverrides,
-			outfitById,
-			handleRemovedPiece,
-		],
+		[trip.id, counts, bringOverrides, outfitById, handleRemovedPiece],
 	);
 
 	const buckets = useMemo(
-		() =>
-			buildBuckets(days, groups, countById, board.tripOutfits, board.dayNotes),
-		[days, groups, countById, board.tripOutfits, board.dayNotes],
+		() => buildBuckets(days, groups, countById, board.dayNotes),
+		[days, groups, countById, board.dayNotes],
 	);
 
-	const universal = groups[encodeZone(universalZone(trip.id))] ?? [];
-	const backup = groups[encodeZone(backupZone(trip.id))] ?? [];
-
-	function changeView(next: ProvisionView) {
-		setView(next);
-		startTransition(async () => {
-			await updateUserSettings({ defaultProvisionView: next });
-			router.refresh();
-		});
-	}
-
-	function changePieceSize(next: PieceSize) {
-		setPieceSize(next);
-		startTransition(async () => {
-			await updateUserSettings({ pieceSize: next });
-			router.refresh();
-		});
-	}
+	const universal = (groups[encodeZone(universalZone(trip.id))] ??
+		[]) as BoardProvision[];
+	const backup = (groups[encodeZone(backupZone(trip.id))] ??
+		[]) as BoardProvision[];
 
 	return (
 		<DragBoard {...props}>
 			<DragAnnouncer />
-			<TripPageHeader
-				icon={<Shirt />}
-				title="Clothing"
-				description={`${format(trip.start, 'MMM d')} – ${format(trip.end, 'MMM d')}`}
-				actions={
-					<>
-						<Button
-							variant="outline"
-							size="sm"
-							onClick={toggleCloset}
-							aria-pressed={closetOpen}
-							className={cn(
-								closetOpen &&
-									'border-brand bg-brand-subtle text-brand hover:bg-brand-subtle hover:text-brand',
-							)}
-						>
-							<Shirt />
-							Closet
-						</Button>
-						<Segmented
-							value={view}
-							onValueChange={changeView}
-							options={[
-								{
-									value: ProvisionView.List,
-									icon: <ListIcon />,
-									title: 'List',
-								},
-								{
-									value: ProvisionView.Calendar,
-									icon: <CalendarDays />,
-									title: 'Calendar',
-								},
-							]}
-						/>
-						<Segmented
-							value={pieceSize}
-							onValueChange={changePieceSize}
-							options={[
-								{
-									value: PieceSize.Compact,
-									icon: <Rows3 />,
-									title: 'Compact pieces',
-								},
-								{
-									value: PieceSize.Large,
-									icon: <LayoutGrid />,
-									title: 'Large pieces',
-								},
-							]}
-						/>
-						<DisplayToggle />
-					</>
-				}
-			/>
-
 			<div className="flex flex-col gap-6 md:flex-row md:items-start">
 				<div className="flex min-w-0 flex-1 flex-col gap-6">
 					{/* Keyed remount replays a lightweight CSS enter on view change — pure
@@ -637,7 +554,7 @@ export function ClothingBoard({
 							tripId={trip.id}
 							clothing={closet}
 							outfits={outfits}
-							placed={distinctById}
+							placed={counts}
 							bringOverrides={bringOverrides}
 							onClose={toggleCloset}
 						/>
@@ -775,35 +692,36 @@ function stackPieces(sorted: BoardProvision[]): PieceStack[] {
 /** Project the controlled groups + counts into the DayBucket shape DayColumn renders. */
 function buildBuckets(
 	days: Date[],
-	groups: Record<string, BoardProvision[]>,
+	groups: Record<string, BoardEntry[]>,
 	countById: Map<string, number>,
-	outfits: BoardOutfit[],
 	notes: TripClothingBoard['dayNotes'],
 ): DayBucket[] {
 	const noteByDay = new Map(notes.map((n) => [dayKey(n.day), n.note]));
-	const toStacks = (reps: BoardProvision[]): PieceStack[] =>
-		reps.map((rep) => ({ rep, count: countById.get(rep.id) ?? 1 }));
+	const toStacks = (reps: BoardEntry[]): PieceStack[] =>
+		reps
+			.filter((e): e is BoardProvision => !isDayOutfit(e))
+			.map((rep) => ({ rep, count: countById.get(rep.id) ?? 1 }));
 
 	return days.map((day) => {
 		const key = dayKey(day);
-		const loose = toStacks(groups[encodeZone(dayZone(key))] ?? []);
-		const dayOutfits = outfits
-			.filter((o) => dayKey(o.day) === key)
-			.sort((a, b) => a.order.localeCompare(b.order))
-			.map((outfit) => ({
-				outfit,
-				pieces: toStacks(groups[encodeZone(outfitZone(outfit.id))] ?? []),
-			}));
-		return {
-			day,
-			key,
-			note: noteByDay.get(key) ?? '',
-			loose,
-			outfits: dayOutfits,
-		};
+		// The day's single interleaved list: pieces and outfits in their live order.
+		const entries: DayEntry[] = (groups[encodeZone(dayZone(key))] ?? []).map(
+			(e) =>
+				isDayOutfit(e)
+					? {
+							kind: 'outfit' as const,
+							outfit: e,
+							pieces: toStacks(groups[encodeZone(outfitZone(e.id))] ?? []),
+						}
+					: {
+							kind: 'piece' as const,
+							stack: { rep: e, count: countById.get(e.id) ?? 1 },
+						},
+		);
+		return { day, key, note: noteByDay.get(key) ?? '', entries };
 	});
 }
 
 function emptyBucket(day: Date): DayBucket {
-	return { day, key: dayKey(day), note: '', loose: [], outfits: [] };
+	return { day, key: dayKey(day), note: '', entries: [] };
 }

@@ -19,6 +19,7 @@ function PackRow({
 	fallbackIcon,
 	packed,
 	isLoading,
+	count = 1,
 	onToggle,
 }: {
 	id: string;
@@ -27,6 +28,8 @@ function PackRow({
 	fallbackIcon: ReactNode;
 	packed: boolean;
 	isLoading: boolean;
+	/** How many identical provisions this row stands in for (display-only ×N). */
+	count?: number;
 	onToggle: (checked: boolean) => void;
 }) {
 	return (
@@ -54,6 +57,15 @@ function PackRow({
 					packed && 'opacity-50 [&_span]:line-through',
 				)}
 			/>
+			{count > 1 && (
+				<span
+					data-testid="pack-stack-count"
+					className="bg-brand text-brand-foreground shrink-0 rounded-full px-1.5 py-0.5 text-[0.65rem] font-semibold tabular-nums"
+					title={`${count} units`}
+				>
+					×{count}
+				</span>
+			)}
 		</label>
 	);
 }
@@ -64,12 +76,15 @@ export function ClothingPackItem({
 	clothingName,
 	imageKey,
 	packed,
+	count = 1,
 }: {
 	tripId: string;
 	clothingProvisionId: string;
 	clothingName: string;
 	imageKey?: string | null;
 	packed: boolean;
+	/** Identical clothing provisions are collapsed into one ×N row (display-only). */
+	count?: number;
 }) {
 	const mutation = useMarkClothingProvisionPacked(tripId);
 
@@ -81,6 +96,7 @@ export function ClothingPackItem({
 			fallbackIcon={<Shirt />}
 			packed={packed}
 			isLoading={mutation.isPending}
+			count={count}
 			onToggle={(checked) => {
 				mutation.mutate({ id: clothingProvisionId, packed: checked });
 			}}

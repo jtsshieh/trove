@@ -32,7 +32,8 @@ function sequentialRanks(count: number): string[] {
 /** Loads an essential, 404ing if it doesn't belong to `userId`. */
 async function requireEssential(userId: string, id: string) {
 	const essential = await prisma.essential.findUnique({ where: { id } });
-	if (essential?.userId !== userId) throw new ApiError(404, 'Essential not found');
+	if (essential?.userId !== userId)
+		throw new ApiError(404, 'Essential not found');
 	return essential;
 }
 
@@ -43,12 +44,26 @@ async function requireEssentialGroup(userId: string, id: string) {
 	return group;
 }
 
-export function createEssential(userId: string, input: CreateEssentialInput) {
+/** Next lexorank after the user's last essential (appends to the closet order). */
+async function nextEssentialRank(userId: string) {
+	const last = await prisma.essential.findFirst({
+		where: { userId },
+		orderBy: { order: 'desc' },
+		select: { order: true },
+	});
+	return rankAfter(last?.order || null);
+}
+
+export async function createEssential(
+	userId: string,
+	input: CreateEssentialInput,
+) {
 	return prisma.essential.create({
 		data: {
 			name: input.name,
 			category: input.category,
 			quantity: input.quantity ?? 1,
+			order: await nextEssentialRank(userId),
 			imageKey: input.imageKey,
 			user: { connect: { id: userId } },
 		},
@@ -59,6 +74,20 @@ export async function createEssentialBatch(
 	userId: string,
 	items: CreateEssentialInput[],
 ) {
+	// Pre-compute appended ranks (sequential after the user's last essential) so the
+	// concurrent creates below don't race on a shared counter.
+	const last = await prisma.essential.findFirst({
+		where: { userId },
+		orderBy: { order: 'desc' },
+		select: { order: true },
+	});
+	let rank = last?.order ? LexoRank.parse(last.order) : LexoRank.middle();
+	const ranks = items.map((_, i) =>
+		i === 0 && !last?.order
+			? rank.toString()
+			: (rank = rank.genNext()).toString(),
+	);
+
 	// Create independently so one bad row never rolls back the whole batch — the UI
 	// keeps failed rows around (with their error) for a retry.
 	const results = await Promise.all(
@@ -69,6 +98,7 @@ export async function createEssentialBatch(
 						name: item.name,
 						category: item.category,
 						quantity: item.quantity ?? 1,
+						order: ranks[index],
 						imageKey: item.imageKey,
 						user: { connect: { id: userId } },
 					},
@@ -105,6 +135,20 @@ export async function editEssential(
 export async function deleteEssential(userId: string, id: string) {
 	const essential = await requireEssential(userId, id);
 	await prisma.essential.delete({ where: { id: essential.id } });
+	return { ok: true as const };
+}
+
+/** Drag-to-reorder: persist a single essential's new lexorank in the closet order. */
+export async function reorderEssential(
+	userId: string,
+	id: string,
+	order: string,
+) {
+	const essential = await requireEssential(userId, id);
+	await prisma.essential.update({
+		where: { id: essential.id },
+		data: { order },
+	});
 	return { ok: true as const };
 }
 

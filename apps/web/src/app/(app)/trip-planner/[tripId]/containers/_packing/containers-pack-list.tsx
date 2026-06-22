@@ -27,6 +27,29 @@ interface ContainerProvisionListProps {
 	trip: ContainerPackingBoard;
 }
 
+type ClothingRow = ClothingProvision & { clothing: Clothing };
+
+/**
+ * Collapse identical clothing provisions (same clothingId) in a container into one
+ * representative + a ×count, preserving order — so the packing view reads like the
+ * provisioning board's stacks. Display-only: toggling the rep flips just the rep.
+ */
+function stackClothing(
+	provisions: ClothingRow[],
+): { rep: ClothingRow; count: number }[] {
+	const rows: { rep: ClothingRow; count: number }[] = [];
+	const indexByClothing = new Map<string, number>();
+	for (const p of provisions) {
+		const at = indexByClothing.get(p.clothingId);
+		if (at !== undefined) rows[at].count += 1;
+		else {
+			indexByClothing.set(p.clothingId, rows.length);
+			rows.push({ rep: p, count: 1 });
+		}
+	}
+	return rows;
+}
+
 export function ContainerPackList({
 	tripId,
 	trip,
@@ -120,15 +143,16 @@ function ContainerPackCard({
 				) : (
 					<div className="flex flex-col">
 						{isClothes
-							? containerProvision.clothingProvisions.map(
-									({ clothing, id, packed }) => (
+							? stackClothing(containerProvision.clothingProvisions).map(
+									({ rep, count }) => (
 										<ClothingPackItem
-											key={id}
+											key={rep.id}
 											tripId={tripId}
-											clothingProvisionId={id}
-											clothingName={generateClothingName(clothing)}
-											imageKey={clothing.imageKey}
-											packed={packed}
+											clothingProvisionId={rep.id}
+											clothingName={generateClothingName(rep.clothing)}
+											imageKey={rep.clothing.imageKey}
+											packed={rep.packed}
+											count={count}
 										/>
 									),
 								)

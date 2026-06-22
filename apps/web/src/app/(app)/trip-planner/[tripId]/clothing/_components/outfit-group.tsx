@@ -5,7 +5,7 @@ import { CoatHanger } from '@phosphor-icons/react';
 import { useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 
-import { DragSource, DropZone } from '@/components/dnd';
+import { DropZone } from '@/components/dnd';
 import { Button } from '@/components/ui/button';
 import {
 	Popover,
@@ -36,6 +36,10 @@ export function OutfitGroup({
 	zone,
 	count,
 	grid,
+	dragRef,
+	handleRef,
+	isDragging,
+	className,
 	children,
 }: {
 	outfit: BoardOutfit;
@@ -43,38 +47,37 @@ export function OutfitGroup({
 	count: number;
 	/** Calendar view: flow pieces as image-forward tiles instead of a stack. */
 	grid?: boolean;
+	/** dnd refs from the wrapping Sortable: the card drags to reorder/move the outfit. */
+	dragRef?: (node: HTMLElement | null) => void;
+	handleRef?: (node: Element | null) => void;
+	isDragging?: boolean;
+	/** Extra classes on the root (e.g. col-span-full so it spans a piece grid row). */
+	className?: string;
 	children: ReactNode;
 }) {
 	const [expanded, setExpanded] = useState(true);
-	// The grouping drags from a day zone so the board can detect a same-day no-op.
-	const dragZone: Zone = { kind: 'day', ownerId: zone.ownerId };
 
 	return (
-		<div data-testid="outfit-group" data-outfit-id={outfit.id}>
+		<div
+			ref={dragRef}
+			data-testid="outfit-group"
+			data-outfit-id={outfit.id}
+			className={cn(isDragging && 'opacity-50', className)}
+		>
 			<DropZone
 				zone={zone}
 				accepts={['clothing']}
 				className="ring-foreground/10 bg-surface-sunken data-[drop-target]:bg-brand-subtle rounded-xl p-1.5 ring-1 transition-colors duration-[var(--dur-fast)] ease-[var(--ease-out)]"
 			>
 				<div className="border-foreground/10 mb-1 flex items-center gap-1 border-b px-0.5 pb-1">
-					<DragSource id={outfit.id} type="trip-outfit" zone={dragZone}>
-						{({ ref, handleRef, isDragging }) => (
-							<span
-								ref={(node) => {
-									ref(node);
-									handleRef(node);
-								}}
-								data-testid="outfit-grip"
-								aria-label={`Move ${outfit.name ?? 'outfit'} to another day`}
-								className={cn(
-									'text-muted-foreground/50 hover-hover:hover:text-muted-foreground -ml-0.5 flex shrink-0 cursor-grab touch-none items-center transition-[color,opacity] duration-[var(--dur-fast)] ease-[var(--ease-out)] active:cursor-grabbing',
-									isDragging && 'opacity-50',
-								)}
-							>
-								<GripVertical className="size-3.5" />
-							</span>
-						)}
-					</DragSource>
+					<span
+						ref={handleRef}
+						data-testid="outfit-grip"
+						aria-label={`Reorder ${outfit.name ?? 'outfit'}`}
+						className="text-muted-foreground/50 hover-hover:hover:text-muted-foreground -ml-0.5 flex shrink-0 cursor-grab touch-none items-center transition-[color,opacity] duration-[var(--dur-fast)] ease-[var(--ease-out)] active:cursor-grabbing"
+					>
+						<GripVertical className="size-3.5" />
+					</span>
 					<button
 						type="button"
 						onClick={() => setExpanded((v) => !v)}

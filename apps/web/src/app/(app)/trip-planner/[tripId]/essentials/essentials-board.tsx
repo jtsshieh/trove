@@ -6,7 +6,6 @@ import { Backpack, GripVertical, Layers, Minus, Plus, X } from 'lucide-react';
 import React from 'react';
 import { toast } from 'sonner';
 
-import { DisplayToggle } from '@/components/display-mode';
 import { DragAnnouncer, DragBoard, DropZone, Sortable } from '@/components/dnd';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -37,7 +36,6 @@ import {
 } from '@/lib/dnd/zone';
 import { cn } from '@/lib/utils';
 
-import { TripPageHeader } from '../_components/trip-page-header';
 import {
 	changeEssentialProvisionDayOrder,
 	moveEssentialProvision,
@@ -112,14 +110,10 @@ export function EssentialsBoard({
 	tripId,
 	provisions,
 	subGroups,
-	closet,
-	groups,
 }: {
 	tripId: string;
 	provisions: Provision[];
 	subGroups: TripEssentialGroup[];
-	closet: Essential[];
-	groups: BoardGroup[];
 }) {
 	const queryClient = useQueryClient();
 	const invalidateBoard = React.useCallback(
@@ -309,52 +303,39 @@ export function EssentialsBoard({
 		[boardGroups, countById],
 	);
 
-	const usedKeys = new Set(
-		// An essential is "fully used" only once every owned unit is provisioned.
+	return (
+		<DragBoard {...props}>
+			<DragAnnouncer />
+			<div className="grid gap-4 lg:grid-cols-3">
+				{CATEGORY_ORDER.map((category) => (
+					<CategoryLane
+						key={category}
+						tripId={tripId}
+						category={category}
+						accept={acceptForCategory(category)}
+						acceptSubgroup={acceptForSubgroup}
+						free={stacksFor(categoryZone(category))}
+						subGroups={subGroupsByCategory.get(category) ?? []}
+						stacksFor={(groupId) => stacksFor(subgroupZone(groupId))}
+					/>
+				))}
+			</div>
+		</DragBoard>
+	);
+}
+
+/** An essential is "fully used" only once every owned unit is provisioned. */
+export function usedEssentialKeys(
+	closet: Essential[],
+	provisions: Provision[],
+): Set<string> {
+	return new Set(
 		closet
 			.filter(
 				(e) =>
 					provisions.filter((p) => p.essentialId === e.id).length >= e.quantity,
 			)
 			.map((e) => e.id),
-	);
-
-	return (
-		<>
-			<TripPageHeader
-				icon={<Backpack />}
-				title="Essentials"
-				description="Grouped by type. Drop items into a sub-group, or import a premade group."
-				actions={
-					<div className="flex items-center gap-2">
-						<AddGroup tripId={tripId} groups={groups} />
-						<AddEssentials
-							tripId={tripId}
-							closet={closet}
-							usedKeys={usedKeys}
-						/>
-						<DisplayToggle />
-					</div>
-				}
-			/>
-			<DragBoard {...props}>
-				<DragAnnouncer />
-				<div className="grid gap-4 lg:grid-cols-3">
-					{CATEGORY_ORDER.map((category) => (
-						<CategoryLane
-							key={category}
-							tripId={tripId}
-							category={category}
-							accept={acceptForCategory(category)}
-							acceptSubgroup={acceptForSubgroup}
-							free={stacksFor(categoryZone(category))}
-							subGroups={subGroupsByCategory.get(category) ?? []}
-							stacksFor={(groupId) => stacksFor(subgroupZone(groupId))}
-						/>
-					))}
-				</div>
-			</DragBoard>
-		</>
 	);
 }
 
@@ -547,6 +528,8 @@ function StackTile({
 			{({ ref, handleRef, isDragging }) => (
 				<div
 					ref={ref}
+					data-testid="essential-tile"
+					data-name={rep.essential.name}
 					className={cn(
 						'flex items-center gap-1 rounded-lg bg-card p-1.5 ring-1 ring-border transition-[opacity,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out)]',
 						'hover-hover:hover:ring-foreground/15',
@@ -722,7 +705,7 @@ function AddSubGroupButton({
 	);
 }
 
-function AddEssentials({
+export function AddEssentials({
 	tripId,
 	closet,
 	usedKeys,
@@ -817,7 +800,7 @@ function AddEssentials({
 	);
 }
 
-function AddGroup({
+export function AddGroup({
 	tripId,
 	groups,
 }: {

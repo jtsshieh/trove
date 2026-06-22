@@ -18,3 +18,11 @@ export const markContainerPacked = (
 	id: string,
 	input: MarkContainerPackedInput,
 ) => api.patch<MutationResult>(`/api/container-provisions/${id}/packed`, input);
+
+/** Toggle a direct (containerless) clothing item's packed flag inside its suitcase. */
+export const markClothingPacked = (id: string, input: { packed: boolean }) =>
+	api.patch<MutationResult>(`/api/clothing-provisions/${id}/packed`, input);
+
+/** Toggle a direct (containerless) essential's packed flag inside its suitcase. */
+export const markEssentialPacked = (id: string, input: { packed: boolean }) =>
+	api.patch<MutationResult>(`/api/essential-provisions/${id}/packed`, input);

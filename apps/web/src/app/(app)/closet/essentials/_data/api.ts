@@ -35,6 +35,9 @@ export const editEssential = (id: string, input: EditEssentialInput) =>
 export const deleteEssential = (id: string) =>
 	api.del<{ ok: true }>(`/api/essentials/${id}`);
 
+export const reorderEssential = (id: string, order: string) =>
+	api.patch<{ ok: true }>(`/api/essentials/${id}/order`, { order });
+
 export const scanEssentialImage = (imageKey: string) =>
 	api.post<{ suggestion: EssentialScanSuggestion | null }>(
 		'/api/essentials/scan',
@@ -44,8 +47,10 @@ export const scanEssentialImage = (imageKey: string) =>
 export const createEssentialGroup = (input: CreateEssentialGroupInput) =>
 	api.post<{ id: string }>('/api/essential-groups', input);
 
-export const editEssentialGroup = (id: string, input: EditEssentialGroupInput) =>
-	api.patch<{ ok: true }>(`/api/essential-groups/${id}`, input);
+export const editEssentialGroup = (
+	id: string,
+	input: EditEssentialGroupInput,
+) => api.patch<{ ok: true }>(`/api/essential-groups/${id}`, input);
 
 export const deleteEssentialGroup = (id: string) =>
 	api.del<{ ok: true }>(`/api/essential-groups/${id}`);

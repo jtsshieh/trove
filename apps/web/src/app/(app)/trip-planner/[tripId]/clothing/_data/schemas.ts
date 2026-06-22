@@ -56,6 +56,14 @@ export const renameTripOutfitSchema = z.object({
 
 export const moveTripOutfitToDaySchema = z.object({
 	day: z.coerce.date(),
+	// The lexorank for the outfit's slot among that day's outfits (drag-to-position).
+	// Omitted → appended to the end of the destination day.
+	order: z.string().optional(),
+});
+
+/** Reorder an outfit within its current day (drag the outfit grip). */
+export const changeTripOutfitOrderSchema = z.object({
+	order: z.string(),
 });
 
 export const saveTripOutfitAsTemplateSchema = z.object({
@@ -86,6 +94,9 @@ export type CreateAdHocTripOutfitInput = z.infer<
 export type RenameTripOutfitInput = z.infer<typeof renameTripOutfitSchema>;
 export type MoveTripOutfitToDayInput = z.infer<
 	typeof moveTripOutfitToDaySchema
+>;
+export type ChangeTripOutfitOrderInput = z.infer<
+	typeof changeTripOutfitOrderSchema
 >;
 export type SaveTripOutfitAsTemplateInput = z.infer<
 	typeof saveTripOutfitAsTemplateSchema

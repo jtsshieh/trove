@@ -24,6 +24,7 @@ import type { Clothing } from '@/generated/prisma/client';
 import type { OutfitWithItems } from '@/app/(app)/outfits/_data/fetchers';
 import { generateClothingName } from '@/lib/generate-clothing-name';
 import { imageSrc } from '@/lib/images';
+import { sortByRank } from '@/lib/dnd/lexorank';
 import type { Zone } from '@/lib/dnd/zone';
 import { effectiveBringing, remaining, type BringMap } from '@/lib/reuse';
 import { cn } from '@/lib/utils';
@@ -148,7 +149,11 @@ function ClothesTab({
 		}
 		return [...byType.entries()]
 			.sort(([a], [b]) => a.localeCompare(b))
-			.map(([heading, items]) => ({ heading, items }));
+			.map(([heading, items]) => ({
+				heading,
+				// Within a type, follow the wardrobe's manual order (lexorank).
+				items: sortByRank(items, (i) => i.order),
+			}));
 	}, [clothing, query]);
 
 	if (clothing.length === 0) {
@@ -432,11 +437,9 @@ function ClosetPiece({
 										? 'bg-muted text-muted-foreground'
 										: 'bg-brand-subtle text-brand',
 								)}
-								title={
-									fullyUsed
-										? 'All units placed'
-										: `${left} of ${value} still to place`
-								}
+								title={`${placedCount} of ${value} placed${
+									fullyUsed ? '' : ` · ${left} still to place`
+								}`}
 							>
 								{fullyUsed ? 'used' : `${left} left`}
 							</span>

@@ -35,6 +35,36 @@ import type {
  * ownership middleware. No revalidatePath — the client invalidates the board query.
  */
 
+/**
+ * The highest rank among a day's "entries" — its loose pieces (dayOrder) AND its
+ * outfit groupings (TripOutfit.order). Loose pieces and outfits share one ordered
+ * list per day so they interleave (an outfit can sit between pieces), so newly added
+ * pieces/outfits append after BOTH. Both fields are lexoranks in the same scope, so
+ * the max is a plain string compare. Null when the day is empty.
+ */
+async function lastDayEntryRank(
+	tripId: string,
+	day: Date,
+): Promise<string | null> {
+	const [lastPiece, lastOutfit] = await Promise.all([
+		prisma.clothingProvision.findFirst({
+			where: { tripId, section: ProvisionSection.Day, day, tripOutfitId: null },
+			orderBy: { dayOrder: 'desc' },
+			select: { dayOrder: true },
+		}),
+		prisma.tripOutfit.findFirst({
+			where: { tripId, day },
+			orderBy: { order: 'desc' },
+			select: { order: true },
+		}),
+	]);
+	const ranks = [lastPiece?.dayOrder, lastOutfit?.order].filter(
+		(r): r is string => !!r,
+	);
+	if (ranks.length === 0) return null;
+	return ranks.sort((a, b) => a.localeCompare(b)).at(-1) ?? null;
+}
+
 /** A stored provision → the placement shape the reuse rules reason over. */
 function toPlacement(p: {
 	section: ProvisionSection;
@@ -137,18 +167,25 @@ export async function createClothingProvisions(
 		};
 	}
 
-	const last = await prisma.clothingProvision.findFirst({
-		where: {
-			tripId,
-			section,
-			day: placementDay,
-			tripOutfitId: tripOutfitId ?? null,
-		},
-		orderBy: { dayOrder: 'desc' },
-		select: { dayOrder: true },
-	});
-
-	let rank: string | null = last?.dayOrder ?? null;
+	// Loose day pieces append after the day's last ENTRY (pieces + outfits) so they
+	// land at the end of the interleaved day list; outfit pieces / sections append
+	// after the last item in their own bucket.
+	let rank: string | null;
+	if (section === ProvisionSection.Day && !tripOutfitId) {
+		rank = await lastDayEntryRank(tripId, placementDay!);
+	} else {
+		const last = await prisma.clothingProvision.findFirst({
+			where: {
+				tripId,
+				section,
+				day: placementDay,
+				tripOutfitId: tripOutfitId ?? null,
+			},
+			orderBy: { dayOrder: 'desc' },
+			select: { dayOrder: true },
+		});
+		rank = last?.dayOrder ?? null;
+	}
 	const data = valid.map((clothingId) => {
 		rank = rankAfter(rank);
 		return {
@@ -169,9 +206,10 @@ export async function createClothingProvisions(
 }
 
 /**
- * One-click spread: place one piece on as many trip days as it still fits, skipping
- * days it's already on and any day the exclusivity/capacity rules reject. Caps at the
- * effective bringing count (existing loose day-placements count against it).
+ * One-click spread: place one piece on EVERY trip day it isn't already on, gated only
+ * by the exclusivity rules (a piece can be re-worn across days as one shared unit, so
+ * "add to every day" really means every day — the bring count is not a cap here; any
+ * placements beyond it simply read as reuse via the ×N badge).
  */
 export async function addClothingToDays(
 	userId: string,
@@ -179,21 +217,13 @@ export async function addClothingToDays(
 	clothingId: string,
 ) {
 	const trip = await requireTrip(userId, tripId);
-	const clothing = await requireClothing(userId, clothingId);
+	await requireClothing(userId, clothingId);
 
 	// Trip days normalized to local midnight, the same key the board derives.
 	const tripDays = eachDayOfInterval({
 		start: trip.start,
 		end: trip.end,
 	}).map((d) => startOfDay(d));
-
-	const bring = await prisma.tripClothingBring.findUnique({
-		where: { tripId_clothingId: { tripId, clothingId } },
-		select: { bringing: true },
-	});
-	const bringMap: BringMap = new Map();
-	if (bring) bringMap.set(clothingId, bring.bringing);
-	const bringing = effectiveBringing(bringMap, clothingId, clothing.quantity);
 
 	// Existing LOOSE day-placements of this piece (outside any outfit).
 	const existing = await prisma.clothingProvision.findMany({
@@ -207,13 +237,8 @@ export async function addClothingToDays(
 	});
 	const existingKeys = new Set(existing.map((p) => p.day!.toISOString()));
 
-	// Days it isn't already on, chronological.
-	const availableDays = tripDays.filter(
-		(d) => !existingKeys.has(d.toISOString()),
-	);
-
-	const capacity = Math.max(0, bringing - existingKeys.size);
-	const candidates = availableDays.slice(0, capacity);
+	// Every day it isn't already on, chronological — no bring-count cap.
+	const candidates = tripDays.filter((d) => !existingKeys.has(d.toISOString()));
 	if (candidates.length === 0) {
 		return {
 			type: 'success' as const,
@@ -221,21 +246,29 @@ export async function addClothingToDays(
 		};
 	}
 
-	// Last dayOrder per day-key across ALL loose day-provisions, so each new piece
-	// appends after whatever already sits on that day.
-	const looseDay = await prisma.clothingProvision.findMany({
-		where: { tripId, section: ProvisionSection.Day, tripOutfitId: null },
-		select: { day: true, dayOrder: true },
-	});
+	// Last ENTRY rank per day-key — across loose day-provisions AND outfit groupings
+	// (they share one ordered day list) — so each new piece appends after whatever
+	// already sits on that day, outfit or piece.
+	const [looseDay, dayOutfits] = await Promise.all([
+		prisma.clothingProvision.findMany({
+			where: { tripId, section: ProvisionSection.Day, tripOutfitId: null },
+			select: { day: true, dayOrder: true },
+		}),
+		prisma.tripOutfit.findMany({
+			where: { tripId },
+			select: { day: true, order: true },
+		}),
+	]);
 	const lastOrderByKey = new Map<string, string>();
-	for (const p of looseDay) {
-		if (!p.day) continue;
-		const key = p.day.toISOString();
+	const bump = (day: Date | null, rank: string) => {
+		if (!day) return;
+		const key = day.toISOString();
 		const current = lastOrderByKey.get(key);
-		if (!current || p.dayOrder.localeCompare(current) > 0) {
-			lastOrderByKey.set(key, p.dayOrder);
-		}
-	}
+		if (!current || rank.localeCompare(current) > 0)
+			lastOrderByKey.set(key, rank);
+	};
+	for (const p of looseDay) bump(p.day, p.dayOrder);
+	for (const o of dayOutfits) bump(o.day, o.order);
 
 	const data: {
 		tripId: string;
@@ -415,18 +448,15 @@ export async function assignOutfitToDays(
 
 	await prisma.$transaction(async (tx) => {
 		for (const day of days) {
-			const lastOutfit = await tx.tripOutfit.findFirst({
-				where: { tripId, day },
-				orderBy: { order: 'desc' },
-				select: { order: true },
-			});
+			// Append the outfit after the day's last entry (pieces + outfits) so it
+			// lands at the end of the interleaved day list rather than pinned above.
 			const tripOutfit = await tx.tripOutfit.create({
 				data: {
 					tripId,
 					day,
 					name: outfit.name,
 					sourceOutfitId: outfit.id,
-					order: rankAfter(lastOutfit?.order ?? null),
+					order: rankAfter(await lastDayEntryRank(tripId, day)),
 				},
 			});
 
@@ -461,17 +491,14 @@ export async function createAdHocTripOutfit(
 ) {
 	await requireTrip(userId, tripId);
 
-	const last = await prisma.tripOutfit.findFirst({
-		where: { tripId, day },
-		orderBy: { order: 'desc' },
-		select: { order: true },
-	});
+	// Append after the day's last entry (pieces + outfits) so the new outfit lands at
+	// the end of the interleaved day list rather than pinned above the loose pieces.
 	const tripOutfit = await prisma.tripOutfit.create({
 		data: {
 			tripId,
 			day,
 			name: name ?? null,
-			order: rankAfter(last?.order ?? null),
+			order: rankAfter(await lastDayEntryRank(tripId, day)),
 		},
 	});
 
@@ -518,19 +545,25 @@ export async function deleteTripOutfit(userId: string, tripOutfitId: string) {
 export async function moveTripOutfitToDay(
 	userId: string,
 	tripOutfitId: string,
-	{ day }: MoveTripOutfitToDayInput,
+	{ day, order }: MoveTripOutfitToDayInput,
 ) {
 	const tripOutfit = await requireTripOutfit(userId, tripOutfitId);
 
-	const last = await prisma.tripOutfit.findFirst({
-		where: { tripId: tripOutfit.tripId, day },
-		orderBy: { order: 'desc' },
-		select: { order: true },
-	});
+	// Use the dropped slot's rank when provided (drag-to-position across days),
+	// otherwise append to the end of the destination day.
+	let rank = order;
+	if (!rank) {
+		const last = await prisma.tripOutfit.findFirst({
+			where: { tripId: tripOutfit.tripId, day },
+			orderBy: { order: 'desc' },
+			select: { order: true },
+		});
+		rank = rankAfter(last?.order ?? null);
+	}
 	await prisma.$transaction([
 		prisma.tripOutfit.update({
 			where: { id: tripOutfitId },
-			data: { day, order: rankAfter(last?.order ?? null) },
+			data: { day, order: rank },
 		}),
 		prisma.clothingProvision.updateMany({
 			where: { tripOutfitId, tripId: tripOutfit.tripId },
@@ -538,6 +571,21 @@ export async function moveTripOutfitToDay(
 		}),
 	]);
 	return { type: 'success' as const, message: 'Outfit moved' };
+}
+
+/** Reorder an outfit within its current day (sets its lexorank among that day's outfits). */
+export async function changeTripOutfitOrder(
+	userId: string,
+	tripOutfitId: string,
+	order: string,
+) {
+	await requireTripOutfit(userId, tripOutfitId);
+
+	await prisma.tripOutfit.update({
+		where: { id: tripOutfitId },
+		data: { order },
+	});
+	return { type: 'success' as const, message: 'Reordered' };
 }
 
 /**

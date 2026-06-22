@@ -40,6 +40,14 @@ export const scanEssentialImageSchema = z.object({
 });
 
 /**
+ * Drag-to-reorder a closet essential. The client (controlled @dnd-kit board) computes
+ * the new lexorank from the essential's final neighbours and sends it directly.
+ */
+export const changeEssentialOrderSchema = z.object({
+	order: z.string(),
+});
+
+/**
  * Bulk create from the essentials "Bulk add" flow. Each row is an independent
  * draft; the action creates them one-by-one and reports per-index failures so a
  * partial failure never loses the whole batch.

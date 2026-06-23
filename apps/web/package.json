@@ -48,6 +48,7 @@
 		"motion": "^12.40.0",
 		"next": "16.2.9",
 		"onnxruntime-node": "1.24.3",
+		"piscina": "^5.2.0",
 		"react": "19.2.7",
 		"react-day-picker": "^10.0.1",
 		"react-dom": "19.2.7",
@@ -79,6 +80,6 @@
 		"@types/react-dom": "19.2.3"
 	},
 	"engines": {
-		"node": ">=20.19"
+		"node": ">=24"
 	}
 }

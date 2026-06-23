@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
 		'@huggingface/transformers',
 		'onnxruntime-node',
 		'sharp',
+		// Spawns worker threads and resolves the worker file by path — must not be
+		// bundled. The image worker pool (image-pool.server.ts) loads it.
+		'piscina',
 	],
 	// Native modules loaded via dlopen at runtime are missed by Next's standalone
 	// tracer, so include them explicitly: argon2's prebuild and sharp's libvips
@@ -18,6 +21,10 @@ const nextConfig: NextConfig = {
 	// NAS — so this stays architecture-agnostic. Runner is glibc (node:24-slim).
 	outputFileTracingIncludes: {
 		'/': [
+			// The image worker is loaded at runtime by Piscina via an absolute path
+			// (process.cwd()/workers/...), so Next's tracer never sees it. Ship it
+			// explicitly; Node runs the .ts directly via native type stripping.
+			'./workers/**/*',
 			'./node_modules/argon2/prebuilds/linux-arm64/*',
 			'./node_modules/argon2/prebuilds/linux-x64/*',
 			'./node_modules/@img/**/*',

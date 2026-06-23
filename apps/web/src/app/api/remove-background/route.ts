@@ -1,9 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { getCurrentUser } from '@/app/(app)/account/_data/fetchers';
-import { removeBackground } from '@/lib/background-removal.server';
+import { runRemoveBackground } from '@/lib/image-pool.server';
 
 // CPU inference can take a while, especially on the first (cold) request.
+// Inference runs on a worker thread (see image-pool.server) so the main thread
+// keeps serving pages while it grinds.
 export const maxDuration = 120;
 
 export async function POST(request: NextRequest) {
@@ -20,17 +22,18 @@ export async function POST(request: NextRequest) {
 	// should be restored even if RMBG dropped them.
 	const mask = form.get('mask');
 	const keepMask =
-		mask instanceof File ? Buffer.from(await mask.arrayBuffer()) : undefined;
+		mask instanceof File ? new Uint8Array(await mask.arrayBuffer()) : undefined;
 
 	try {
-		const png = await removeBackground(
-			Buffer.from(await file.arrayBuffer()),
+		const png = await runRemoveBackground(
+			new Uint8Array(await file.arrayBuffer()),
 			keepMask,
 		);
 		return new NextResponse(new Uint8Array(png), {
 			headers: { 'Content-Type': 'image/png' },
 		});
 	} catch (error) {
+		// Covers worker failures and pool backpressure (queue at limit).
 		console.error('background removal failed', error);
 		return NextResponse.json(
 			{ error: 'Background removal unavailable' },

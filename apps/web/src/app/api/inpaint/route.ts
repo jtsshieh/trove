@@ -1,10 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { getCurrentUser } from '@/app/(app)/account/_data/fetchers';
-import { inpaint } from '@/lib/inpaint.server';
+import { runInpaint } from '@/lib/image-pool.server';
 
 // CPU inference can take a while, especially on the first (cold) request that also
-// downloads the model.
+// downloads the model. Inference runs on a worker thread (see image-pool.server)
+// so the main thread keeps serving pages while it grinds.
 export const maxDuration = 120;
 
 /**
@@ -25,14 +26,15 @@ export async function POST(request: NextRequest) {
 	}
 
 	try {
-		const png = await inpaint(
-			Buffer.from(await file.arrayBuffer()),
-			Buffer.from(await mask.arrayBuffer()),
+		const png = await runInpaint(
+			new Uint8Array(await file.arrayBuffer()),
+			new Uint8Array(await mask.arrayBuffer()),
 		);
 		return new NextResponse(new Uint8Array(png), {
 			headers: { 'Content-Type': 'image/png' },
 		});
 	} catch (error) {
+		// Covers worker failures and pool backpressure (queue at limit).
 		console.error('inpaint failed', error);
 		return NextResponse.json({ error: 'Inpainting unavailable' }, { status: 503 });
 	}

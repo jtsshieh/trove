@@ -13,6 +13,9 @@ services:
       context: ./edge
     hostname: closet
     restart: unless-stopped
+    # /run must be ephemeral so dbus/avahi pid files don't survive a restart.
+    tmpfs:
+      - /run
     volumes:
       - ./certs:/certs:ro
       - ./Caddyfile:/etc/caddy/Caddyfile:ro

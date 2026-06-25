@@ -44,6 +44,44 @@ Respond with ONLY a JSON object: {"name": string, "category": one of the allowed
 	return runScan(imageBytes, ext, instructions);
 }
 
+export async function scanBathroom(
+	imageBytes: Uint8Array,
+	ext: string,
+	taxonomy: { types: string[]; brands: string[] },
+): Promise<Record<string, unknown> | null> {
+	const instructions = `Identify a single BATHROOM product from a photo — anything you'd find in a bathroom: body wash, shampoo, toothpaste, a toothbrush, a razor, a hair dryer, towels, toilet paper, cotton swabs, etc.
+For "name", read the logos and label text and produce a SPECIFIC product name that includes the brand and product line whenever legible — e.g. "OGX Argan Oil Shampoo", "Oral-B Pro 1000 Toothbrush", "Cottonelle Ultra Toilet Paper" — NOT a generic word like "Shampoo" or "Toothbrush". Concise: brand + line + product type, no sizes/volumes/marketing copy.
+Classify "nature": "Consumable" for things used up and re-bought (body wash, toothpaste, toilet paper, cotton swabs), "Appliance" for durable devices (toothbrush, razor, hair dryer, tweezers), "Launderable" for reusable washables (towels, washcloths, bath mats).
+Only when nature is "Consumable" AND the product is a liquid, also set "form" to its physical state: one of Liquid, Gel, Aerosol, Cream, Paste, Powder. Omit "form" for non-liquids and for appliances/launderables.
+"type" is a short free-form category (e.g. "Shampoo", "Toothbrush", "Towel"); prefer one of the existing types when it fits: ${taxonomy.types.join(', ') || '(none yet)'}.
+"brand" — prefer an existing brand when it matches: ${taxonomy.brands.join(', ') || '(none yet)'}; otherwise the brand you read.
+Respond with ONLY a JSON object: {"name": string, "nature": "Consumable"|"Appliance"|"Launderable", "form"?: "Liquid"|"Gel"|"Aerosol"|"Cream"|"Paste"|"Powder", "type"?: string, "brand"?: string}.`;
+	return runScan(imageBytes, ext, instructions);
+}
+
+export async function scanElectronic(
+	imageBytes: Uint8Array,
+	ext: string,
+	brands: string[],
+): Promise<Record<string, unknown> | null> {
+	const instructions = `Identify a single ELECTRONIC item from a photo — a device (iPad, laptop, phone), a cable, a power bank, or another accessory.
+For "name", read logos/labels and produce a SPECIFIC name including brand + model when legible — e.g. "Apple iPad Pro 11", "Anker PowerCore 10000", "USB-C to Lightning Cable" — not just "Tablet" or "Cable".
+Classify "kind": "Device" (a primary gadget like an iPad/Mac/phone), "Cable", "PowerBank" (a battery pack), or "Accessory" (anything else — keyboard, pencil, case, adapter).
+"brand" — prefer an existing brand when it matches: ${brands.join(', ') || '(none yet)'}; otherwise the brand you read. "model" — the model name/number if legible (e.g. "iPad Pro 11", "A2301"), else omit.
+Respond with ONLY a JSON object: {"name": string, "kind": "Device"|"Cable"|"PowerBank"|"Accessory", "brand"?: string, "model"?: string}.`;
+	return runScan(imageBytes, ext, instructions);
+}
+
+export async function scanDocument(
+	imageBytes: Uint8Array,
+	ext: string,
+): Promise<Record<string, unknown> | null> {
+	const instructions = `Identify a single travel DOCUMENT from a photo — a passport, driver's license, insurance card, boarding pass, vaccination card, etc.
+Return ONLY a short generic NAME for the kind of document (e.g. "Passport", "Driver's License", "Travel Insurance Card"). Do NOT transcribe any personal details, numbers, names, or dates — only the document type as its name.
+Respond with ONLY a JSON object: {"name": string}.`;
+	return runScan(imageBytes, ext, instructions);
+}
+
 export async function scanContainer(
 	imageBytes: Uint8Array,
 	ext: string,

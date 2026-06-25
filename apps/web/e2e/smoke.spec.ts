@@ -3,12 +3,12 @@ import fs from 'node:fs';
 import { expect, test } from '@playwright/test';
 
 test('auth protects the dashboard', async ({ page, context }) => {
-	await page.goto('/trip-planner');
+	await page.goto('/trips');
 	await expect(
 		page.getByRole('heading', { name: 'Trips', exact: true }),
 	).toBeVisible();
 	await context.clearCookies();
-	await page.goto('/trip-planner');
+	await page.goto('/trips');
 	await expect(page).toHaveURL(/\/sign-in/);
 });
 
@@ -24,12 +24,12 @@ test('explore every board, capturing runtime errors + screenshots', async ({
 	const dir = 'test-results/explore';
 	fs.mkdirSync(dir, { recursive: true });
 
-	await page.goto('/trip-planner');
+	await page.goto('/trips');
 	const openHref = await page
 		.locator('a:has-text("Open")')
 		.first()
 		.getAttribute('href');
-	expect(openHref).toMatch(/\/trip-planner\/[^/]+$/);
+	expect(openHref).toMatch(/\/trips\/[^/]+$/);
 	const base = openHref!;
 	await page.goto(base);
 	await page.waitForLoadState('networkidle').catch(() => {});
@@ -46,8 +46,8 @@ test('explore every board, capturing runtime errors + screenshots', async ({
 		});
 	}
 
-	errors.push('\n----- /outfits -----');
-	await page.goto('/outfits');
+	errors.push('\n----- /closet/outfits -----');
+	await page.goto('/closet/outfits');
 	await page.waitForLoadState('networkidle').catch(() => {});
 	await page.waitForTimeout(500);
 	await page.screenshot({ path: `${dir}/outfits.png`, fullPage: true });

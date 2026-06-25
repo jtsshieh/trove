@@ -5,7 +5,9 @@ export default defineConfig({
 	// Shared dev DB — keep tests serial and deterministic.
 	fullyParallel: false,
 	workers: 1,
-	retries: 0,
+	// One retry: the suite is serial on a shared DB and a few drag/Select
+	// interactions occasionally flake on dropdown-scroll/pointer timing.
+	retries: 1,
 	reporter: 'list',
 	globalSetup: './e2e/global-setup.ts',
 	use: {

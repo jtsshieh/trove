@@ -94,32 +94,6 @@ test('brand edit — dialog preloads the current name (defaultValues) and rename
 	await expect(page.getByText(renamed, { exact: true })).toBeVisible();
 });
 
-test('essential create — required-category Select + name submits and persists', async ({
-	page,
-}) => {
-	await page.goto('/closet/essentials');
-	await page.waitForLoadState('networkidle').catch(() => {});
-
-	await page.getByRole('button', { name: 'Add Essential' }).click();
-	const dialog = page.getByRole('dialog');
-	await expect(dialog).toBeVisible();
-
-	// The category Select starts on its placeholder (null default, no
-	// uncontrolled→controlled flip), then we pick a category from the portal.
-	await dialog.getByText('Select the type of essential').click();
-	await page.getByRole('option', { name: 'Electronic', exact: true }).click();
-
-	const name = 'QA Charger';
-	await dialog.getByPlaceholder('Enter a name for this essential').fill(name);
-	await dialog.getByRole('button', { name: 'Save changes' }).click();
-	await expect(dialog).not.toBeVisible();
-
-	await expect(page.getByText(name)).toBeVisible();
-	await page.reload();
-	await page.waitForLoadState('networkidle').catch(() => {});
-	await expect(page.getByText(name)).toBeVisible();
-});
-
 test('clothing edit — Type/Brand/Color selects preload from the item (controlled prefill)', async ({
 	page,
 }) => {

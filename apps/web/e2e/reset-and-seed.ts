@@ -16,7 +16,7 @@ const prisma = new PrismaClient({
 
 async function main() {
 	await prisma.$executeRawUnsafe(
-		'TRUNCATE TABLE "trips", "clothes", "essentials", "containers", "luggage", "outfits", "brands", "clothing_types" RESTART IDENTITY CASCADE',
+		'TRUNCATE TABLE "trips", "clothes", "bathroom_products", "electronics", "documents", "containers", "luggage", "outfits", "brands", "clothing_types", "essential_groups" RESTART IDENTITY CASCADE',
 	);
 	await prisma.$disconnect();
 	await runSeed();

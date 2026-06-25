@@ -340,7 +340,7 @@ try {
 // ---- TRIP (date-range Calendar in a Popover; delete via the manage page) ----
 async function tripCrud() {
 	const name = `E2E Trip ${SUFFIX}`;
-	await page.goto(`${BASE}/trip-planner`, { waitUntil: 'networkidle' });
+	await page.goto(`${BASE}/trips`, { waitUntil: 'networkidle' });
 	try {
 		await page.getByRole('button', { name: 'Create Trip' }).click();
 		const d = dialogTitled('Create Trip');
@@ -378,13 +378,13 @@ async function tripCrud() {
 	try {
 		// reload the trips list for a clean, settled DOM (avoids the post-create
 		// TanStack refetch race)
-		await page.goto(`${BASE}/trip-planner`, { waitUntil: 'domcontentloaded' });
+		await page.goto(`${BASE}/trips`, { waitUntil: 'domcontentloaded' });
 		// the "Open" control is an <a href> that Base UI exposes as role=button
 		const openLink = cardByText(name).getByRole('button', { name: 'Open' });
 		await openLink.waitFor({ state: 'visible', timeout: 20000 });
 		const href = await openLink.getAttribute('href');
 		const tripId = href.split('/').filter(Boolean).pop();
-		await page.goto(`${BASE}/trip-planner/${tripId}/manage`, {
+		await page.goto(`${BASE}/trips/${tripId}/manage`, {
 			waitUntil: 'domcontentloaded',
 		});
 		const del = page.getByRole('button', { name: 'Delete Trip' });
@@ -393,7 +393,7 @@ async function tripCrud() {
 		const dd = dialogTitled('Delete trip');
 		await dd.waitFor({ state: 'visible' });
 		await dd.locator('button[type="submit"]').click();
-		await page.waitForURL((url) => new URL(url).pathname === '/trip-planner', {
+		await page.waitForURL((url) => new URL(url).pathname === '/trips', {
 			timeout: 20000,
 		});
 		await settle();
@@ -412,7 +412,7 @@ try {
 
 // ---- TRIP-VIEWER PROVISIONS (essential/luggage/container/clothing) ----
 async function makeTrip(name) {
-	await page.goto(`${BASE}/trip-planner`, { waitUntil: 'networkidle' });
+	await page.goto(`${BASE}/trips`, { waitUntil: 'networkidle' });
 	await page.getByRole('button', { name: 'Create Trip' }).click();
 	const d = dialogTitled('Create Trip');
 	await d.waitFor({ state: 'visible' });
@@ -436,7 +436,7 @@ async function makeTrip(name) {
 	await d.getByRole('button', { name: 'Save changes' }).click();
 	await d.waitFor({ state: 'hidden' });
 	await settle();
-	await page.goto(`${BASE}/trip-planner`, { waitUntil: 'domcontentloaded' });
+	await page.goto(`${BASE}/trips`, { waitUntil: 'domcontentloaded' });
 	const openLink = cardByText(name).getByRole('button', { name: 'Open' });
 	await openLink.waitFor({ state: 'visible', timeout: 20000 });
 	const href = await openLink.getAttribute('href');
@@ -444,7 +444,7 @@ async function makeTrip(name) {
 }
 
 async function addComboProvision({ tab, addBtn, dialogTitle, option, submit }) {
-	await page.goto(`${BASE}/trip-planner/${PROV_TRIP}/${tab}`, {
+	await page.goto(`${BASE}/trips/${PROV_TRIP}/${tab}`, {
 		waitUntil: 'domcontentloaded',
 	});
 	await page.getByRole('button', { name: addBtn }).first().click();
@@ -512,7 +512,7 @@ async function provisionsCrud() {
 	}
 
 	try {
-		await page.goto(`${BASE}/trip-planner/${PROV_TRIP}/clothing`, {
+		await page.goto(`${BASE}/trips/${PROV_TRIP}/clothing`, {
 			waitUntil: 'domcontentloaded',
 		});
 		await page.getByRole('button', { name: 'Add Provision' }).first().click();
@@ -541,7 +541,7 @@ async function provisionsCrud() {
 
 	// delete one provision explicitly (essential), then cascade-delete the trip
 	try {
-		await page.goto(`${BASE}/trip-planner/${PROV_TRIP}/essentials`, {
+		await page.goto(`${BASE}/trips/${PROV_TRIP}/essentials`, {
 			waitUntil: 'domcontentloaded',
 		});
 		const row = page
@@ -558,7 +558,7 @@ async function provisionsCrud() {
 	}
 
 	try {
-		await page.goto(`${BASE}/trip-planner/${PROV_TRIP}/manage`, {
+		await page.goto(`${BASE}/trips/${PROV_TRIP}/manage`, {
 			waitUntil: 'domcontentloaded',
 		});
 		const del = page.getByRole('button', { name: 'Delete Trip' });
@@ -567,7 +567,7 @@ async function provisionsCrud() {
 		const dd = dialogTitled('Delete trip');
 		await dd.waitFor({ state: 'visible' });
 		await dd.locator('button[type="submit"]').click();
-		await page.waitForURL((url) => new URL(url).pathname === '/trip-planner', {
+		await page.waitForURL((url) => new URL(url).pathname === '/trips', {
 			timeout: 20000,
 		});
 		ok('provisions: trip cascade-delete');

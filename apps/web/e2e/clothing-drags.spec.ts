@@ -23,7 +23,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function gotoListBoard(page: Page): Promise<void> {
-	await page.goto('/trip-planner');
+	await page.goto('/trips');
 	const href = await page
 		.locator('a:has-text("Open")')
 		.first()

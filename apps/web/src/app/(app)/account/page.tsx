@@ -1,15 +1,21 @@
 import React from 'react';
 
+import { getUserSettings } from '@/lib/auth';
+
 import { getCurrentUserSafe } from './_data/fetchers';
 import {
 	DeleteAccountCard,
 	PasswordCard,
+	PreferencesCard,
 	UsernameCard,
 } from './account-settings-cards';
 import { AuthCard } from './auth-card';
 
 export default async function UserSettingsPage() {
-	const user = await getCurrentUserSafe();
+	const [user, settings] = await Promise.all([
+		getCurrentUserSafe(),
+		getUserSettings(),
+	]);
 
 	return (
 		<div className="flex w-full justify-center">
@@ -19,6 +25,7 @@ export default async function UserSettingsPage() {
 				</div>
 				<div className="flex w-full flex-col gap-4">
 					<UsernameCard user={user} />
+					<PreferencesCard volumeUnit={settings.volumeUnit} />
 					<PasswordCard />
 					<AuthCard />
 					<DeleteAccountCard />

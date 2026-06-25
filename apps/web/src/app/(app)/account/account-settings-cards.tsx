@@ -23,11 +23,33 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { VolumeUnitProvider, VolumeUnitToggle } from '@/components/volume-unit';
 import { ApiError } from '@/lib/api/errors';
+import type { VolumeUnit } from '@/generated/prisma/enums';
 import { toast } from 'sonner';
 
 import { changePassword, changeUsername, deleteUser } from './_data/api';
 import type { UserDTO } from './_data/fetchers';
+
+export function PreferencesCard({ volumeUnit }: { volumeUnit: VolumeUnit }) {
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle>Preferences</CardTitle>
+				<CardDescription>
+					Choose how volumes (bottle sizes, TSA liquids limits) are shown across
+					your closet and trips.
+				</CardDescription>
+			</CardHeader>
+			<CardContent className="flex items-center justify-between gap-4">
+				<Label>Volume unit</Label>
+				<VolumeUnitProvider initial={volumeUnit}>
+					<VolumeUnitToggle />
+				</VolumeUnitProvider>
+			</CardContent>
+		</Card>
+	);
+}
 
 export function UsernameCard({ user }: { user: UserDTO }) {
 	const [username, setUsername] = useState(user.username);

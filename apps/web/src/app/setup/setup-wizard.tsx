@@ -52,7 +52,7 @@ export function SetupWizard() {
 			{step === 'welcome' ? (
 				<Card className="w-full max-w-lg">
 					<CardHeader className="items-center text-center">
-						<CardTitle className="text-2xl">Welcome to Closet Manager</CardTitle>
+						<CardTitle className="text-2xl">Welcome to Trove</CardTitle>
 						<CardDescription>
 							Your personal home for everything you own and everywhere you take
 							it.

@@ -90,7 +90,7 @@ export function AppShell({
 							{app.name}
 						</Link>
 					) : (
-						<span className="text-brand px-1 font-bold">Closet Manager</span>
+						<span className="text-brand px-1 font-bold">Trove</span>
 					)}
 					{sections.length > 0 && (
 						<div className="ml-2 flex gap-1">

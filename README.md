@@ -1,6 +1,7 @@
-# closet
+# trove
 
-A self-hosted closet / outfit / trip-packing app, deployed to a Synology NAS.
+A self-hosted whole-house inventory manager (closet, bathroom, electronics,
+documents & trip-packing), deployed to a Synology NAS.
 
 ## Repository layout
 
@@ -17,7 +18,7 @@ apps/
 deploy/       All infra, separated from app code:
   compose.dev.yaml      dev data services (Postgres, Redis, MinIO)
   compose.prod.yaml     full prod stack (app, migrate, updater, edge, data)
-  Caddyfile  edge/      LAN edge: TLS for closet.local + mDNS
+  Caddyfile  edge/      LAN edge: TLS for trove.local + mDNS
   bootstrap.sh          first-time / manual deploy on the NAS
   .env.production.example
   certs/                NAS-only TLS cert/key (git-ignored)
@@ -72,5 +73,5 @@ Thereafter, update from **Admin → System → Check for updates** in the app.
 > **Note:** changes that move `deploy/` or the updater itself cannot ship via the
 > in-app updater (it never recreates its own container). Apply those once with
 > `deploy/bootstrap.sh` on the NAS; in-app updates resume afterward. The compose
-> project name (`closet`) is fixed so named volumes — and your data —
+> project name (`trove`) is fixed so named volumes — and your data —
 > survive across deploys.

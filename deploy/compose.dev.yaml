@@ -1,6 +1,6 @@
 # Data services only. The app itself runs locally via `npm run dev`.
 # Start these with: docker compose up -d
-name: closet
+name: trove
 
 services:
   # Postgres — the primary datastore (Prisma).
@@ -9,13 +9,13 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
-      POSTGRES_DB: closetdb
+      POSTGRES_DB: trovedb
     ports:
       - '127.0.0.1:5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d closetdb']
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d trovedb']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -57,7 +57,7 @@ services:
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-minioadmin}
       MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-minioadmin}
-      S3_BUCKET: ${S3_BUCKET:-closet-images}
+      S3_BUCKET: ${S3_BUCKET:-trove-images}
     entrypoint: >
       /bin/sh -c "
       until mc alias set local http://minio:9000 \"$${MINIO_ROOT_USER}\" \"$${MINIO_ROOT_PASSWORD}\"; do echo waiting for minio; sleep 1; done;

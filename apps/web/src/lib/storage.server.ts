@@ -7,7 +7,7 @@ import {
 	S3Client,
 } from '@aws-sdk/client-s3';
 
-const bucket = process.env.S3_BUCKET ?? 'closet-images';
+const bucket = process.env.S3_BUCKET ?? 'trove-images';
 
 const s3ClientSingleton = () =>
 	new S3Client({

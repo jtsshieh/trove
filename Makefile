@@ -1,4 +1,4 @@
-# Convenience targets for the packing-list-helper monorepo.
+# Convenience targets for the trove monorepo.
 # Layout: apps/web (Next.js)  ·  apps/updater (deploy supervisor)  ·  deploy/ (infra).
 # There is no JS monorepo tool — docker-compose + these targets orchestrate everything.
 # Dev shares ONE env file (apps/web/.env): the app reads it directly, and the dev

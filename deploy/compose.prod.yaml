@@ -4,14 +4,14 @@
 #   - `migrate` applies migrations; `app` waits for it.
 #   - `updater` drives in-app one-click updates (holds the Docker socket).
 # Bring up once with bootstrap.sh; thereafter update from the app's System page.
-name: closet
+name: trove
 
 services:
-  # LAN edge: TLS termination (Caddy) + mDNS (Avahi advertises closet.local).
+  # LAN edge: TLS termination (Caddy) + mDNS (Avahi advertises trove.local).
   edge:
     build:
       context: ./edge
-    hostname: closet
+    hostname: trove
     restart: unless-stopped
     # /run must be ephemeral so dbus/avahi pid files don't survive a restart.
     tmpfs:
@@ -69,7 +69,7 @@ services:
       # Paths are relative to REPO_DIR (the updater's working_dir + bind-mount).
       COMPOSE_FILE: deploy/compose.prod.yaml
       ENV_FILE: deploy/.env
-      COMPOSE_PROJECT_NAME: closet
+      COMPOSE_PROJECT_NAME: trove
       DEPLOY_BRANCH: ${DEPLOY_BRANCH:-main}
       REPO_DIR: ${REPO_DIR:?set REPO_DIR in .env}
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
@@ -86,13 +86,13 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
-      POSTGRES_DB: closetdb
+      POSTGRES_DB: trovedb
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
       - internal
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d closetdb']
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d trovedb']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -135,7 +135,7 @@ services:
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-minioadmin}
       MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-minioadmin}
-      S3_BUCKET: ${S3_BUCKET:-closet-images}
+      S3_BUCKET: ${S3_BUCKET:-trove-images}
     entrypoint: >
       /bin/sh -c "
       until mc alias set local http://minio:9000 \"$${MINIO_ROOT_USER}\" \"$${MINIO_ROOT_PASSWORD}\"; do echo waiting for minio; sleep 1; done;
@@ -147,7 +147,7 @@ networks:
   internal:
     driver: bridge
   # macvlan gives `edge` its own IP on the LAN so it can serve :443 and advertise
-  # closet.local without colliding with DSM. Fill in LAN_* / EDGE_IP in .env.
+  # trove.local without colliding with DSM. Fill in LAN_* / EDGE_IP in .env.
   edge:
     driver: macvlan
     driver_opts:

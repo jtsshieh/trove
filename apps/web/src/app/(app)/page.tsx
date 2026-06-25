@@ -13,7 +13,7 @@ export default async function LauncherPage() {
 	return (
 		<div className="flex h-svh w-full flex-col">
 			<header className="flex items-center justify-between border-b px-6 py-3">
-				<span className="text-lg font-bold">Closet Manager</span>
+				<span className="text-lg font-bold">Trove</span>
 				<AccountMenu username={user.username} />
 			</header>
 			<main className="mx-auto w-full max-w-screen-lg flex-1 overflow-auto p-8">

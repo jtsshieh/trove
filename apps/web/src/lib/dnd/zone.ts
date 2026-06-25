@@ -12,7 +12,10 @@ export type ItemType =
 	| 'container'
 	| 'suitcase' // a LuggageProvision card, reorderable on the luggage board
 	| 'outfit' // a reusable Outfit template (closet → day materializes it)
-	| 'trip-outfit'; // a placed TripOutfit grouping (day → day moves it whole)
+	| 'trip-outfit' // a placed TripOutfit grouping (day → day moves it whole)
+	| 'document' // a personal Document, reorderable in the documents list
+	| 'bathroomProduct' // a bathroom product card, reorderable in the catalog
+	| 'electronic'; // an electronic card, reorderable in the electronics list
 
 export type ZoneKind =
 	| 'day' // clothing on a calendar/list day            owner = isoDay
@@ -20,7 +23,7 @@ export type ZoneKind =
 	| 'outfitLane' // reorderable TripOutfits within a day  owner = isoDay
 	| 'universal' // day-agnostic universal section         owner = tripId
 	| 'backup' // day-agnostic backup section               owner = tripId
-	| 'essentialCategory' // trip essentials by category    owner = EssentialCategory
+	| 'essentialApp' // trip essentials by app              owner = EssentialKind
 	| 'essentialSubgroup' // a trip essential sub-group      owner = tripEssentialGroupId
 	| 'container' // items packed into a ContainerProvision  owner = containerProvisionId
 	| 'containerless' // items packed straight into luggage  owner = tripId
@@ -28,7 +31,10 @@ export type ZoneKind =
 	| 'luggage' // containers packed into a LuggageProvision owner = luggageProvisionId
 	| 'luggageCards' // the reorderable suitcase cards        owner = tripId
 	| 'wardrobe' // wardrobe grid, one zone per type group   owner = typeName
-	| 'closet'; // wardrobe panel (drag source only)         owner = tripId
+	| 'closet' // wardrobe panel (drag source only)          owner = tripId
+	| 'documents' // the reorderable personal documents list owner = userId
+	| 'bathroomNature' // bathroom catalog grouped by nature  owner = BathroomNature
+	| 'electronicKind'; // electronics list grouped by kind   owner = ElectronicKind
 
 export interface Zone {
 	kind: ZoneKind;

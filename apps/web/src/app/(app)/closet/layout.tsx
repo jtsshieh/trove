@@ -1,4 +1,4 @@
-import { Box, PillBottle, Shirt } from 'lucide-react';
+import { Box, Layers, Shirt } from 'lucide-react';
 import { PropsWithChildren } from 'react';
 
 import { AppShell } from '@/components/app-shell/app-shell';
@@ -18,9 +18,9 @@ export default async function ClosetLayout({ children }: PropsWithChildren) {
 					icon: <Shirt className="size-4" />,
 				},
 				{
-					name: 'Essentials',
-					href: '/closet/essentials',
-					icon: <PillBottle className="size-4" />,
+					name: 'Outfits',
+					href: '/closet/outfits',
+					icon: <Layers className="size-4" />,
 				},
 				{
 					name: 'Packing Gear',

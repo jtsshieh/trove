@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { getContainerBoardData } from '@/app/(app)/trip-planner/[tripId]/containers/_provisioning/_data/fetchers';
+import { getContainerBoardData } from '@/app/(app)/trips/[tripId]/containers/_provisioning/_data/fetchers';
 import { ApiError } from '@/lib/api/errors';
 import { authedRoute } from '@/lib/api/http';
 import { requireTrip } from '@/lib/api/ownership';

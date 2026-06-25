@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-import { deleteClothingProvisionSchema } from '@/app/(app)/trip-planner/[tripId]/clothing/_data/schemas';
-import * as service from '@/app/(app)/trip-planner/[tripId]/clothing/_data/service';
+import { deleteClothingProvisionSchema } from '@/app/(app)/trips/[tripId]/clothing/_data/schemas';
+import * as service from '@/app/(app)/trips/[tripId]/clothing/_data/service';
 import { authedRoute } from '@/lib/api/http';
 
 const paramsSchema = z.object({ id: z.string() });

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { getLuggageProvisioningBoard } from '@/app/(app)/trip-planner/[tripId]/luggage/_provisioning/_data/fetchers';
+import { getLuggageProvisioningBoard } from '@/app/(app)/trips/[tripId]/luggage/_provisioning/_data/fetchers';
 import { ApiError } from '@/lib/api/errors';
 import { authedRoute } from '@/lib/api/http';
 import { requireTrip } from '@/lib/api/ownership';

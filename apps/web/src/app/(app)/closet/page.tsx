@@ -1,4 +1,4 @@
-import { Box, PillBottle, Shirt } from 'lucide-react';
+import { Box, Layers, Shirt } from 'lucide-react';
 import Link from 'next/link';
 import React from 'react';
 
@@ -13,10 +13,10 @@ import { prisma } from '@/lib/db.server';
 
 export default async function ClosetOverview() {
 	const user = await getCurrentUserSafe();
-	const [clothing, essentials, luggage, containers, brands, types] =
+	const [clothing, outfits, luggage, containers, brands, types] =
 		await Promise.all([
 			prisma.clothing.count({ where: { userId: user.id } }),
-			prisma.essential.count({ where: { userId: user.id } }),
+			prisma.outfit.count({ where: { userId: user.id } }),
 			prisma.luggage.count({ where: { userId: user.id } }),
 			prisma.container.count({ where: { userId: user.id } }),
 			prisma.brand.count({ where: { userId: user.id } }),
@@ -33,12 +33,12 @@ export default async function ClosetOverview() {
 			sub: `${types} types · ${brands} brands`,
 		},
 		{
-			name: 'Essentials',
-			href: '/closet/essentials',
-			icon: PillBottle,
-			count: essentials,
-			unit: essentials === 1 ? 'item' : 'items',
-			sub: 'toiletries · electronics · documents',
+			name: 'Outfits',
+			href: '/closet/outfits',
+			icon: Layers,
+			count: outfits,
+			unit: outfits === 1 ? 'outfit' : 'outfits',
+			sub: 'saved outfits',
 		},
 		{
 			name: 'Packing Gear',

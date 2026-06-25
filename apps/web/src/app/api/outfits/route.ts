@@ -1,6 +1,6 @@
-import { getAllOutfits } from '@/app/(app)/outfits/_data/fetchers';
-import { createOutfitSchema } from '@/app/(app)/outfits/_data/schemas';
-import * as service from '@/app/(app)/outfits/_data/service';
+import { getAllOutfits } from '@/app/(app)/closet/outfits/_data/fetchers';
+import { createOutfitSchema } from '@/app/(app)/closet/outfits/_data/schemas';
+import * as service from '@/app/(app)/closet/outfits/_data/service';
 import { authedRoute } from '@/lib/api/http';
 
 export const GET = authedRoute({

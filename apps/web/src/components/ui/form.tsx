@@ -6,6 +6,7 @@ import {
 	type DeepKeys,
 	type ReactFormExtendedApi,
 	useForm,
+	useStore,
 } from '@tanstack/react-form';
 import * as React from 'react';
 import type { z } from 'zod';
@@ -57,6 +58,12 @@ export interface AppForm<TValues, TOut = TValues> {
 		onValid: (values: TOut) => unknown,
 	) => (event?: React.FormEvent) => void;
 	reset: (values?: Partial<TValues>) => void;
+	/**
+	 * Reactively read a field's value (re-renders the caller on change).
+	 * IMPORTANT: this is a React hook under the hood — call it once,
+	 * unconditionally, at the top level of render. Never inside a loop,
+	 * condition, or callback (e.g. an `.find()` predicate).
+	 */
 	watch: <K extends keyof TValues>(name: K) => TValues[K];
 	getValues: () => TValues;
 	setValue: <K extends keyof TValues>(name: K, value: TValues[K]) => void;
@@ -98,7 +105,15 @@ export function useAppForm<
 			reset: (values) => {
 				tanstack.reset((values ?? defaultsRef.current) as TValues);
 			},
-			watch: (name) => tanstack.getFieldValue(name as never) as never,
+			// Reactive: subscribe to the field's slice of the form store so consumers
+			// re-render on change (e.g. a nature select that gates other fields). Safe
+			// as a hidden hook because every call site invokes watch() exactly once,
+			// unconditionally, at the top of its render.
+			watch: ((name: string) =>
+				useStore(
+					tanstack.store,
+					(s: { values: Record<string, unknown> }) => s.values[name],
+				)) as never,
 			getValues: () => tanstack.state.values as TValues,
 			setValue: (name, value) => {
 				tanstack.setFieldValue(name as never, value as never);

@@ -25,6 +25,7 @@ model Trip {
   tripEssentialGroups TripEssentialGroup[]
   dayNotes            TripDayNote[]
   clothingBrings      TripClothingBring[]
+  bathroomUnits       BathroomUnit[]
 
   @@map("trips")
 }

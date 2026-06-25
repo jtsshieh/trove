@@ -62,14 +62,26 @@ model TripClothingBring {
   @@map("trip_clothing_brings")
 }
 
+// Which app pickers a brand is offered in. One shared Brand table, but each
+// domain shows a separate list (filtered by `domains has <Domain>`).
+enum BrandDomain {
+  Closet
+  Bathroom
+  Electronics
+}
+
 model Brand {
   id   String @id @default(cuid())
   name String
 
+  domains BrandDomain[]
+
   userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  clothes Clothing[]
+  clothes          Clothing[]
+  bathroomProducts BathroomProduct[]
+  electronics      Electronic[]
 
   @@unique([userId, name])
   @@map("brands")

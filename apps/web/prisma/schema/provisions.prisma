@@ -4,6 +4,23 @@ enum ProvisionSection {
   Backup
 }
 
+// Which app an essentials-board item comes from. The Essentials packing layer is
+// item-polymorphic: a provision references exactly one of a bathroom variant, an
+// electronic, or a document — matching `kind`.
+enum EssentialKind {
+  Bathroom
+  Electronic
+  Document
+}
+
+// Carry-on vs checked is decided PER TRIP (the same bag is carry-on on one trip,
+// checked on another), so it lives on the provision, not the luggage catalog.
+enum LuggageKind {
+  CarryOn
+  Checked
+  Personal
+}
+
 model ClothingProvision {
   id String @id @default(cuid())
 
@@ -56,8 +73,22 @@ model EssentialProvision {
   tripId String @map("trip_id")
   trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
-  essentialId String    @map("essential_id")
-  essential   Essential @relation(fields: [essentialId], references: [id], onDelete: Cascade)
+  // Polymorphic item ref — exactly one of the three is set, matching `kind`
+  // (enforced by a DB CHECK + the service layer).
+  kind EssentialKind
+
+  bathroomVariantId String?          @map("bathroom_variant_id")
+  bathroomVariant   BathroomVariant? @relation(fields: [bathroomVariantId], references: [id], onDelete: Cascade)
+
+  electronicId String?     @map("electronic_id")
+  electronic   Electronic? @relation(fields: [electronicId], references: [id], onDelete: Cascade)
+
+  documentId String?   @map("document_id")
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  // The bathroom unit checked out for this trip at the packing stage (optional).
+  bathroomUnitId String?       @map("bathroom_unit_id")
+  bathroomUnit   BathroomUnit? @relation(fields: [bathroomUnitId], references: [id], onDelete: SetNull)
 
   containerProvisionId String?             @map("container_provision_id")
   containerProvision   ContainerProvision? @relation(fields: [containerProvisionId], references: [id], onDelete: Cascade)
@@ -109,6 +140,9 @@ model LuggageProvision {
 
   luggageId String  @map("luggage_id")
   luggage   Luggage @relation(fields: [luggageId], references: [id], onDelete: Cascade)
+
+  // Carry-on / checked / personal, decided for this trip (drives liquids compliance).
+  kind LuggageKind @default(CarryOn)
 
   containerProvisions ContainerProvision[]
 

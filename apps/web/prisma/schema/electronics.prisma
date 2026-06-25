@@ -1,0 +1,60 @@
+// Electronics = durable devices, cables, power banks, accessories. Flat items
+// with a fixed `kind`, a date acquired, a domain-scoped brand, and accessory
+// associations (an iPad linked to its Apple Pencil + Magic Keyboard).
+
+enum ElectronicKind {
+  Device // iPad, Mac, phone…
+  Cable
+  PowerBank
+  Accessory
+}
+
+model Electronic {
+  id String @id @default(cuid())
+
+  name String
+  kind ElectronicKind @default(Accessory)
+
+  // Shared Brand table, tagged with domain=Electronics.
+  brandName String? @map("brand_name")
+  brandId   String? @map("brand_id")
+  brand     Brand?  @relation(fields: [brandId], references: [id], onDelete: SetNull)
+
+  model        String?
+  serialNumber String?   @map("serial_number")
+  acquiredAt   DateTime? @map("acquired_at")
+
+  imageKey String? @map("image_key")
+  quantity Int     @default(1)
+  notes    String?
+
+  order String @default("")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Accessory associations (self many-to-many via ElectronicLink).
+  asDevice    ElectronicLink[] @relation("LinkDevice")
+  asAccessory ElectronicLink[] @relation("LinkAccessory")
+
+  // Trip-packing (polymorphic Essentials packing layer).
+  essentialProvisions EssentialProvision[]
+  essentialGroupItems EssentialGroupItem[]
+
+  @@index([userId])
+  @@map("electronics")
+}
+
+// Associate an accessory with a device — iPad ↔ Apple Pencil / Magic Keyboard.
+model ElectronicLink {
+  id String @id @default(cuid())
+
+  deviceId String     @map("device_id")
+  device   Electronic @relation("LinkDevice", fields: [deviceId], references: [id], onDelete: Cascade)
+
+  accessoryId String     @map("accessory_id")
+  accessory   Electronic @relation("LinkAccessory", fields: [accessoryId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceId, accessoryId])
+  @@map("electronic_links")
+}

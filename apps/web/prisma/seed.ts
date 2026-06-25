@@ -5,11 +5,17 @@ import { hash } from 'argon2';
 import { startOfDay } from 'date-fns';
 import { LexoRank } from 'lexorank';
 
+import { essentialItemFk } from '../src/app/(app)/trips/[tripId]/_data/essential-item';
 import { PrismaClient } from '../src/generated/prisma/client';
 import {
+	BathroomForm,
+	BathroomNature,
+	BathroomUnitState,
+	BrandDomain,
 	ClothingCategory,
 	ContainerType,
-	EssentialCategory,
+	ElectronicKind,
+	LuggageKind,
 	ProvisionSection,
 	UserRole,
 } from '../src/generated/prisma/enums';
@@ -76,8 +82,8 @@ export async function runSeed() {
 	for (const name of brands) {
 		await prisma.brand.upsert({
 			where: { userId_name: { userId: user.id, name } },
-			update: {},
-			create: { name, userId: user.id },
+			update: { domains: [BrandDomain.Closet] },
+			create: { name, domains: [BrandDomain.Closet], userId: user.id },
 		});
 	}
 	console.log(`seeded ${brands.length} brands`);
@@ -110,24 +116,20 @@ export async function runSeed() {
 			}))
 		);
 	}
-	// Essentials share a single per-user lexorank scope (mirrors clothing) so the
-	// closet grid + trip picker render in a stable, drag-reorderable order.
-	let essentialRank = LexoRank.middle();
-	async function ensureEssential(name: string, category: EssentialCategory) {
-		const found = await prisma.essential.findFirst({
-			where: { userId: user.id, name },
+	// Helper to tag/ensure a Brand carries a domain (brands are shared across apps
+	// but each app's picker filters by `domains has <Domain>`).
+	async function ensureBrand(name: string, domain: BrandDomain) {
+		const existing = await prisma.brand.findUnique({
+			where: { userId_name: { userId: user.id, name } },
 		});
-		return (
-			found ??
-			(await prisma.essential.create({
-				data: {
-					name,
-					category,
-					order: (essentialRank = essentialRank.genNext()).toString(),
-					userId: user.id,
-				},
-			}))
-		);
+		const domains = existing
+			? Array.from(new Set([...existing.domains, domain]))
+			: [domain];
+		return prisma.brand.upsert({
+			where: { userId_name: { userId: user.id, name } },
+			update: { domains },
+			create: { name, domains, userId: user.id },
+		});
 	}
 	// Manual wardrobe order is a single per-user lexorank scope; seed pieces get
 	// incrementing ranks in creation order so drag-to-reorder has well-spaced values.
@@ -188,11 +190,197 @@ export async function runSeed() {
 		3,
 	);
 
-	await ensureEssential('Toothbrush', EssentialCategory.Toiletry);
-	// A 2nd Toiletry so the closet + trip essentials have same-category items to reorder.
-	await ensureEssential('Shampoo', EssentialCategory.Toiletry);
-	await ensureEssential('Phone Charger', EssentialCategory.Electronic);
-	await ensureEssential('Passport', EssentialCategory.Document);
+	// ——— Bathroom catalog ———
+	// Each catalog kind owns a per-user lexorank scope so its app grid renders in a
+	// stable, drag-reorderable order.
+	let bathroomRank = LexoRank.middle();
+	async function ensureBathroomProduct(p: {
+		name: string;
+		nature: (typeof BathroomNature)[keyof typeof BathroomNature];
+		form?: (typeof BathroomForm)[keyof typeof BathroomForm];
+		brandName?: string;
+	}) {
+		const found = await prisma.bathroomProduct.findUnique({
+			where: { userId_name: { userId: user.id, name: p.name } },
+		});
+		if (found) return found;
+		let brandConnect = {};
+		if (p.brandName) {
+			const brand = await ensureBrand(p.brandName, BrandDomain.Bathroom);
+			brandConnect = { brandName: p.brandName, brandId: brand.id };
+		}
+		return prisma.bathroomProduct.create({
+			data: {
+				name: p.name,
+				nature: p.nature,
+				form: p.form ?? null,
+				order: (bathroomRank = bathroomRank.genNext()).toString(),
+				userId: user.id,
+				...brandConnect,
+			},
+		});
+	}
+	async function ensureBathroomVariant(v: {
+		productId: string;
+		label: string;
+		capacityMl?: number;
+		order: string;
+	}) {
+		const found = await prisma.bathroomVariant.findFirst({
+			where: { productId: v.productId, label: v.label },
+		});
+		return (
+			found ??
+			(await prisma.bathroomVariant.create({
+				data: {
+					productId: v.productId,
+					label: v.label,
+					capacityMl: v.capacityMl ?? null,
+					order: v.order,
+				},
+			}))
+		);
+	}
+
+	// Shampoo: a consumable liquid with a full-size (over-100mL) + a travel variant.
+	// The full-size variant gets a batch that spawns InStock units.
+	const shampoo = await ensureBathroomProduct({
+		name: 'Shampoo',
+		nature: BathroomNature.Consumable,
+		form: BathroomForm.Liquid,
+		brandName: 'Aesop',
+	});
+	let shampooVariantRank = LexoRank.middle();
+	const shampooFull = await ensureBathroomVariant({
+		productId: shampoo.id,
+		label: '250 mL',
+		capacityMl: 250,
+		order: (shampooVariantRank = shampooVariantRank.genNext()).toString(),
+	});
+	await ensureBathroomVariant({
+		productId: shampoo.id,
+		label: '100 mL Travel',
+		capacityMl: 100,
+		order: (shampooVariantRank = shampooVariantRank.genNext()).toString(),
+	});
+	// A batch on the full-size variant → spawns 3 InStock units (idempotent by count).
+	const shampooUnitCount = await prisma.bathroomUnit.count({
+		where: { variantId: shampooFull.id },
+	});
+	if (shampooUnitCount === 0) {
+		const batch = await prisma.bathroomBatch.create({
+			data: { variantId: shampooFull.id, quantity: 3, userId: user.id },
+		});
+		await prisma.bathroomUnit.createMany({
+			data: Array.from({ length: 3 }, () => ({
+				variantId: shampooFull.id,
+				batchId: batch.id,
+				state: BathroomUnitState.InStock,
+				userId: user.id,
+			})),
+		});
+	}
+
+	// Toothbrush: an appliance (durable device, no form/liquid tracking).
+	const toothbrush = await ensureBathroomProduct({
+		name: 'Toothbrush',
+		nature: BathroomNature.Appliance,
+	});
+	let toothbrushVariantRank = LexoRank.middle();
+	await ensureBathroomVariant({
+		productId: toothbrush.id,
+		label: 'Standard',
+		order: (toothbrushVariantRank = toothbrushVariantRank.genNext()).toString(),
+	});
+
+	// Bath Towel: a launderable item with a single unit set Dirty (mid clean/dirty cycle).
+	const towel = await ensureBathroomProduct({
+		name: 'Bath Towel',
+		nature: BathroomNature.Launderable,
+	});
+	let towelVariantRank = LexoRank.middle();
+	const towelVariant = await ensureBathroomVariant({
+		productId: towel.id,
+		label: 'Bath',
+		order: (towelVariantRank = towelVariantRank.genNext()).toString(),
+	});
+	const towelUnitCount = await prisma.bathroomUnit.count({
+		where: { variantId: towelVariant.id },
+	});
+	if (towelUnitCount === 0) {
+		await prisma.bathroomUnit.create({
+			data: {
+				variantId: towelVariant.id,
+				state: BathroomUnitState.Dirty,
+				userId: user.id,
+			},
+		});
+	}
+
+	// ——— Electronics catalog ———
+	let electronicRank = LexoRank.middle();
+	async function ensureElectronic(e: {
+		name: string;
+		kind: (typeof ElectronicKind)[keyof typeof ElectronicKind];
+		brandName?: string;
+	}) {
+		const found = await prisma.electronic.findFirst({
+			where: { userId: user.id, name: e.name },
+		});
+		if (found) return found;
+		let brandConnect = {};
+		if (e.brandName) {
+			const brand = await ensureBrand(e.brandName, BrandDomain.Electronics);
+			brandConnect = { brandName: e.brandName, brandId: brand.id };
+		}
+		return prisma.electronic.create({
+			data: {
+				name: e.name,
+				kind: e.kind,
+				order: (electronicRank = electronicRank.genNext()).toString(),
+				userId: user.id,
+				...brandConnect,
+			},
+		});
+	}
+	const charger = await ensureElectronic({
+		name: 'Phone Charger',
+		kind: ElectronicKind.Cable,
+		brandName: 'Anker',
+	});
+	const ipad = await ensureElectronic({
+		name: 'iPad',
+		kind: ElectronicKind.Device,
+		brandName: 'Apple',
+	});
+	// Associate the charger (accessory) with the iPad (device).
+	await prisma.electronicLink.upsert({
+		where: {
+			deviceId_accessoryId: { deviceId: ipad.id, accessoryId: charger.id },
+		},
+		update: {},
+		create: { deviceId: ipad.id, accessoryId: charger.id },
+	});
+
+	// ——— Documents catalog ———
+	let documentRank = LexoRank.middle();
+	async function ensureDocument(name: string) {
+		const found = await prisma.document.findFirst({
+			where: { userId: user.id, name },
+		});
+		return (
+			found ??
+			(await prisma.document.create({
+				data: {
+					name,
+					order: (documentRank = documentRank.genNext()).toString(),
+					userId: user.id,
+				},
+			}))
+		);
+	}
+	await ensureDocument('Passport');
+	await ensureDocument('Insurance card');
 
 	const hoodie = await ensureClothing({
 		brandName: 'Uniqlo',
@@ -239,6 +427,7 @@ export async function runSeed() {
 			displayMode: 'Both',
 			defaultProvisionView: 'List',
 			pieceSize: 'Compact',
+			volumeUnit: 'Milliliters',
 		},
 		create: { userId: user.id },
 	});
@@ -314,7 +503,32 @@ export async function runSeed() {
 			],
 		});
 
-		// Provision a container + a suitcase so those boards have cards to pack into.
+		// A couple of polymorphic Essentials provisions so the essentials board has
+		// draggable data: the over-100mL Shampoo variant (Bathroom) + the iPad charger
+		// (Electronic). FKs are built via the shared resolver's `essentialItemFk`.
+		let er = LexoRank.middle();
+		await prisma.essentialProvision.create({
+			data: {
+				tripId: trip.id,
+				section: ProvisionSection.Universal,
+				day: null,
+				dayOrder: (er = er.genNext()).toString(),
+				...essentialItemFk('Bathroom', shampooFull.id),
+			},
+		});
+		await prisma.essentialProvision.create({
+			data: {
+				tripId: trip.id,
+				section: ProvisionSection.Universal,
+				day: null,
+				dayOrder: (er = er.genNext()).toString(),
+				...essentialItemFk('Electronic', charger.id),
+			},
+		});
+
+		// Provision a container + two suitcases (one carry-on, one checked) so those
+		// boards have cards to pack into. The over-100mL Shampoo gets packed directly
+		// into the carry-on (containerless) to exercise the liquids-compliance flow.
 		const cube = await prisma.container.findFirst({
 			where: { userId: user.id, name: 'Packing Cube' },
 		});
@@ -330,15 +544,20 @@ export async function runSeed() {
 				},
 			});
 		}
+		let luggageRank = LexoRank.middle();
 		if (carryOn) {
+			// Carry-on starts empty (a clean drag target for the packing flows); the
+			// liquids-compliance flow packs into it at test/use time.
 			await prisma.luggageProvision.create({
 				data: {
 					tripId: trip.id,
 					luggageId: carryOn.id,
-					tripOrder: LexoRank.middle().toString(),
+					kind: LuggageKind.CarryOn,
+					tripOrder: (luggageRank = luggageRank.genNext()).toString(),
 				},
 			});
 		}
+		// Weekender Duffel stays unprovisioned — available to add on the luggage board.
 	}
 
 	// Demo the per-trip "bringing" override: of the 12 owned White Nike Socks,

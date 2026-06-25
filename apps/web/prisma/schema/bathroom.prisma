@@ -1,0 +1,147 @@
+// Bathroom = everything in the bathroom. An item's `nature` decides how it's
+// tracked: Consumable (used up, bought in batches), Appliance (a durable device),
+// or Launderable (reused with a clean/dirty cycle). Stock is individual units.
+
+enum BathroomNature {
+  Consumable
+  Appliance
+  Launderable
+}
+
+// Physical state — set only for consumable liquids; drives TSA liquids compliance.
+// null = not a liquid (exempt). There is no "Solid".
+enum BathroomForm {
+  Liquid
+  Gel
+  Aerosol
+  Cream
+  Paste
+  Powder
+}
+
+// Per-physical-unit lifecycle. Consumable/Appliance: InStock → InUse → Gone.
+// Launderable: InStock(clean) → InUse → Dirty → (wash) → InStock.
+enum BathroomUnitState {
+  InStock
+  InUse
+  Dirty
+  Gone
+}
+
+model BathroomProduct {
+  id String @id @default(cuid())
+
+  name   String
+  nature BathroomNature @default(Consumable)
+  form   BathroomForm? // consumable liquids only
+
+  notes    String?
+  imageKey String? @map("image_key")
+
+  // Manual catalog ordering (lexorank), one scope per user.
+  order String @default("")
+
+  // Free-form product category (Body Wash, Toothbrush, Towel…). Denormalized name
+  // alongside the id relation, mirroring Clothing.typeName/typeId.
+  typeName String?       @map("type_name")
+  typeId   String?       @map("type_id")
+  type     BathroomType? @relation(fields: [typeId], references: [id], onDelete: SetNull)
+
+  // Shared Brand table, tagged with domain=Bathroom.
+  brandName String? @map("brand_name")
+  brandId   String? @map("brand_id")
+  brand     Brand?  @relation(fields: [brandId], references: [id], onDelete: SetNull)
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  variants BathroomVariant[]
+
+  @@unique([userId, name])
+  @@map("bathroom_products")
+}
+
+model BathroomVariant {
+  id String @id @default(cuid())
+
+  // A size/style: "Travel" 100mL · "Family" 1L · "Bath"/"Hand" towel.
+  label      String?
+  capacityMl Float?  @map("capacity_ml") // only for liquids
+
+  order String @default("")
+
+  productId String          @map("product_id")
+  product   BathroomProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  batches BathroomBatch[]
+  units   BathroomUnit[]
+
+  // Trip-packing of a specific size (polymorphic Essentials packing layer).
+  essentialProvisions EssentialProvision[]
+  essentialGroupItems EssentialGroupItem[]
+
+  @@index([productId])
+  @@map("bathroom_variants")
+}
+
+// An acquisition: "bought N on DATE" → spawns N InStock units.
+model BathroomBatch {
+  id String @id @default(cuid())
+
+  quantity   Int
+  acquiredAt DateTime @default(now()) @map("acquired_at")
+
+  variantId String          @map("variant_id")
+  variant   BathroomVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  units BathroomUnit[]
+
+  // Denormalized owner so the batch tracker query doesn't 2-hop join.
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([variantId, acquiredAt])
+  @@map("bathroom_batches")
+}
+
+// ONE physical item with a nature-aware lifecycle.
+model BathroomUnit {
+  id String @id @default(cuid())
+
+  state        BathroomUnitState @default(InStock)
+  checkedOutAt DateTime?         @map("checked_out_at")
+  endedAt      DateTime?         @map("ended_at") // consumed / retired / discarded
+
+  variantId String          @map("variant_id")
+  variant   BathroomVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  batchId String?        @map("batch_id")
+  batch   BathroomBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+
+  // Set when checked out for a trip (links the unit to that trip's duration).
+  tripId String? @map("trip_id")
+  trip   Trip?   @relation(fields: [tripId], references: [id], onDelete: SetNull)
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // The provision (if any) that checked this unit out for a trip.
+  essentialProvisions EssentialProvision[]
+
+  @@index([variantId, state])
+  @@map("bathroom_units")
+}
+
+// Per-user free-form product type lookup.
+model BathroomType {
+  id   String @id @default(cuid())
+  name String
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  products BathroomProduct[]
+
+  @@unique([userId, name])
+  @@map("bathroom_types")
+}

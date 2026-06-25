@@ -15,16 +15,14 @@ model EssentialGroup {
   @@map("essential_groups")
 }
 
-// TripEssentialGroup = a sub-group of essentials on one trip — created ad-hoc, or
-// materialized from a premade EssentialGroup. It lives in a single category section
-// of the trip essentials board; provisions point at it. Deleting it ungroups its
-// provisions (SetNull) rather than removing them.
+// TripEssentialGroup = a sub-group on one trip — created ad-hoc, or materialized
+// from a premade EssentialGroup template. Provisions point at it. Deleting it
+// ungroups its provisions (SetNull) rather than removing them.
 model TripEssentialGroup {
   id String @id @default(cuid())
 
-  name     String
-  category EssentialCategory
-  order    String
+  name  String
+  order String
 
   tripId String @map("trip_id")
   trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
@@ -45,9 +43,17 @@ model EssentialGroupItem {
   groupId String         @map("group_id")
   group   EssentialGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
-  essentialId String    @map("essential_id")
-  essential   Essential @relation(fields: [essentialId], references: [id], onDelete: Cascade)
+  // Polymorphic item ref — exactly one set, matching `kind` (DB CHECK + service).
+  kind EssentialKind
 
-  @@unique([groupId, essentialId])
+  bathroomVariantId String?          @map("bathroom_variant_id")
+  bathroomVariant   BathroomVariant? @relation(fields: [bathroomVariantId], references: [id], onDelete: Cascade)
+
+  electronicId String?     @map("electronic_id")
+  electronic   Electronic? @relation(fields: [electronicId], references: [id], onDelete: Cascade)
+
+  documentId String?   @map("document_id")
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
   @@map("essential_group_items")
 }

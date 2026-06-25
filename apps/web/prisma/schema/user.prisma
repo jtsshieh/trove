@@ -12,7 +12,14 @@ model User {
   clothes       Clothing[]
   brands        Brand[]
   clothingTypes ClothingType[]
-  essentials    Essential[]
+
+  bathroomProducts BathroomProduct[]
+  bathroomBatches  BathroomBatch[]
+  bathroomUnits    BathroomUnit[]
+  bathroomTypes    BathroomType[]
+
+  electronics Electronic[]
+  documents   Document[]
 
   luggage    Luggage[]
   containers Container[]

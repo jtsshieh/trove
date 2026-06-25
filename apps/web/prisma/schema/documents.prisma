@@ -1,0 +1,18 @@
+// Documents = a name-only list (no document details are stored). Still packable
+// on a trip via the polymorphic Essentials packing layer.
+model Document {
+  id String @id @default(cuid())
+
+  name  String
+  order String @default("")
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Trip-packing (polymorphic Essentials packing layer).
+  essentialProvisions EssentialProvision[]
+  essentialGroupItems EssentialGroupItem[]
+
+  @@index([userId])
+  @@map("documents")
+}
